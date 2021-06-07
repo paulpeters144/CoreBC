@@ -9,19 +9,28 @@ namespace CoreBC.BlockModels
    {
       public string TransactionId { get; set; }
       public string Signature { get; set; }
-      public long LockTime { get; set; }
-      public Input[] Inputs { get; set; }
-      public Output[] Outputs { get; set; }
+      public long Locktime { get; set; }
+      public Input Input { get; set; }
+      public Output Output { get; set; }
+      public string Fee { get; set; }
+      public decimal FeePercent = 0.00025M;
    }
 
    class Input 
    {
       public string FromAddress { get; set; }
-      public double Amount { get; set; }
+      public string Amount { get; set; }
    }
    class Output 
    {
       public string ToAddress { get; set; }
-      public double Amount { get; set; }
+      public string Amount { get; set; }
+   }
+
+   class CoinbaseModel
+   {
+      public string TransactionId { get; set; }
+      public string BlockHash { get; set; }
+      public Output Output { get; set; }
    }
 }

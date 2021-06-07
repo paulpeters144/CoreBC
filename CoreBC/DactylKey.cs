@@ -1,6 +1,8 @@
 ﻿using CoreBC.BlockModels;
 using CoreBC.CryptoApi;
+using CoreBC.Utils;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System;
 using System.IO;
 using System.Linq;
@@ -13,9 +15,8 @@ namespace CoreBC
 {
    internal class DactylKey
    {
-      public int KeySize = 1024;
+      public int KeySize = 512;
       public RSAParameters PublicKey;
-
       private RSAParameters PrivateKey;
 
       public DactylKey(string keyName)
@@ -32,6 +33,40 @@ namespace CoreBC
          string signature = Convert.ToBase64String(messageSigned);
          tx.Signature = signature;
          return tx;
+      }
+
+      public TransactionModel SendMoneyTo(string recPubKey, decimal amount)
+      {
+         Input input = new Input
+         {
+            FromAddress = GetPubKeyString(),
+            Amount = Helpers.FormatDactylDigits(amount)
+         };
+
+         Output output = new Output
+         {
+            ToAddress = recPubKey,
+            Amount = Helpers.FormatDactylDigits(amount)
+         };
+
+         TransactionModel tx = new TransactionModel
+         {
+            Input = input,
+            Output = output,
+            Locktime = new DateTimeOffset(DateTime.UtcNow).ToUnixTimeSeconds(),
+         };
+
+         tx = SignTransaction(tx);
+         tx = CreateTransactionId(tx);
+         tx.Fee = Helpers.FormatDactylDigits(Convert.ToDecimal(input.Amount) * tx.FeePercent);
+
+         bool txVerified = VerifyTransaction(tx);
+         decimal totalTradeAmount = (Convert.ToDecimal(input.Amount) + Convert.ToDecimal(tx.Fee));
+         bool hasEnoughDYL = GetWalletBalance() > totalTradeAmount;
+
+         if (txVerified && hasEnoughDYL)
+            return tx;
+         else  return null;
       }
 
       public bool VerifyTransaction(string transaction)
@@ -59,37 +94,27 @@ namespace CoreBC
       {
          StringBuilder sb = new StringBuilder();
 
-         foreach (var input in tx.Inputs)
-            sb.Append($"{input.FromAddress}{input.Amount}");
-
-         foreach (var output in tx.Outputs)
-            sb.Append($"{output.ToAddress}{output.Amount}");
-
-         sb.Append(tx.LockTime);
+         sb.Append($"{tx.Input.FromAddress}{tx.Input.Amount}");
+         sb.Append($"{tx.Output.ToAddress}{tx.Output.Amount}");
+         sb.Append(tx.Locktime);
          sb.Append(tx.Signature);
+         
          string txFullMessage = sb.ToString();
          byte[] txFullMessageInBytes = Encoding.UTF8.GetBytes(txFullMessage);
          byte[] txIdInBytes = SHA256.Create().ComputeHash(txFullMessageInBytes);
-         StringBuilder txIdSb = new StringBuilder();
-         
-         foreach (byte b in txIdInBytes)
-            txIdSb.Append(b.ToString("x2"));
-
-         tx.TransactionId = $"{DateTime.Now.ToString("yyyyMMdd")}_{txIdSb}";
+         string txId = Helpers.GetSHAStringFromBytes(txIdInBytes);
+         tx.TransactionId = txId;
          return tx;
       }
 
       private string createMessageFrom(TransactionModel tx)
       {
          StringBuilder sb = new StringBuilder();
-         
-         foreach (var input in tx.Inputs)
-            sb.Append($"{input.FromAddress}{input.Amount}");
-         
-         foreach (var output in tx.Outputs)
-            sb.Append($"{output.ToAddress}{output.Amount}");
 
-         sb.Append(tx.LockTime);
+         sb.Append($"{tx.Input.FromAddress}{tx.Input.Amount}");
+         sb.Append($"{tx.Output.ToAddress}{tx.Output.Amount}");
+         sb.Append(tx.Locktime);
+         
          return sb.ToString();
       }
 
@@ -104,10 +129,7 @@ namespace CoreBC
 
       private void findKey(string keyName)
       {
-         var codeBase = System.Reflection.Assembly.GetExecutingAssembly().Location;
-         var pathList = codeBase.Split("\\").ToList();
-         pathList.RemoveAt(pathList.Count - 1);
-         var path = String.Join("\\" , pathList.ToArray());
+         var path = Program.FilePath;
 
          if (!Directory.Exists(path))
             Directory.CreateDirectory(path);
@@ -125,7 +147,7 @@ namespace CoreBC
          }
       }
 
-      public byte[] SignData(byte[] hashOfDataToSign)
+      private byte[] SignData(byte[] hashOfDataToSign)
       {
          using (var rsa = new RSACryptoServiceProvider(KeySize))
          {
@@ -136,8 +158,34 @@ namespace CoreBC
             return rsaFormatter.CreateSignature(hashOfDataToSign);
          }
       }
+      private decimal GetWalletBalance()
+      {
+         string utxoPath = Program.FilePath + "\\Blockchain\\UTXOSet\\UTXOSet.json";
+         string utxoSet = File.ReadAllText(utxoPath);
+         JObject utxoObj = JObject.Parse(utxoSet);
+         string publicKeyString = GetPubKeyString();
+         decimal currentBalance = Convert.ToDecimal(utxoObj[publicKeyString]);
 
-      public bool VerifySignature(byte[] hashOfDataToSign, byte[] signature)
+         string mempoolPath = Program.FilePath + "\\Blockchain\\Mempool\\mempool.json";
+         string mempoolFile = File.ReadAllText(mempoolPath);
+
+         JObject mempoolObj;
+         if (String.IsNullOrEmpty(mempoolFile))
+            mempoolObj = new JObject();
+         else
+            mempoolObj = JObject.Parse(mempoolFile);
+
+         foreach (var tx in mempoolObj)
+         {
+            string txPubKey = tx.Value["Input"]["FromAddress"].ToString();
+            if (String.Equals(txPubKey, publicKeyString))
+               currentBalance -= Convert.ToDecimal(tx.Value["Input"]["Amount"]);
+         }
+
+         return currentBalance;
+      }
+
+      private bool VerifySignature(byte[] hashOfDataToSign, byte[] signature)
       {
          using (var rsa = new RSACryptoServiceProvider(KeySize))
          {

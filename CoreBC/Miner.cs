@@ -1,4 +1,5 @@
-﻿using System;
+﻿using CoreBC.BlockModels;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Security.Cryptography;
@@ -45,7 +46,7 @@ namespace CoreBC
          }
       }
 
-      private static string getHashString(byte[] hashBytes)
+      public static string getHashString(byte[] hashBytes)
       {
          StringBuilder result = new StringBuilder();
 
@@ -65,6 +66,60 @@ namespace CoreBC
             stringChars[i] = chars[random.Next(chars.Length)];
 
          return new String(stringChars);
+      }
+
+      public Dictionary<string, string> Mine(GenesisBlockModel genesisBlock)
+      {
+         var result = new Dictionary<string, string>();
+         string mRoot = genesisBlock.MerkleRoot;
+         string difficulty = genesisBlock.Difficulty;
+         string time = new DateTimeOffset(DateTime.UtcNow).ToUnixTimeSeconds().ToString();
+         Int64 nonce = 0;
+         for ( ; ; )
+         {
+            
+            string attempt = $"{mRoot}{time}{difficulty}{nonce}";
+            byte[] hashBytes = SHA256.Create().ComputeHash(Encoding.UTF8.GetBytes(attempt));
+            string hashAttemp = getHashString(hashBytes);
+
+            if (hashAttemp.StartsWith(genesisBlock.Difficulty))
+            {
+               result.Add("MerkleRoot", mRoot);
+               result.Add("Time", time);
+               result.Add("Difficulty", difficulty);
+               result.Add("Nonce", nonce.ToString());
+               break;
+            }
+            nonce++;
+         }
+
+         return result;
+      }
+
+      public BlockModel Mine(BlockModel block)
+      {
+         string result = string.Empty;
+         string mRoot = block.MerkleRoot;
+         string difficulty = block.Difficulty;
+         string time = new DateTimeOffset(DateTime.UtcNow).ToUnixTimeSeconds().ToString();
+         Int64 nonce = 0;
+         for ( ; ; )
+         {
+
+            string attempt = $"{mRoot}{time}{difficulty}{nonce}";
+            byte[] hashBytes = SHA256.Create().ComputeHash(Encoding.UTF8.GetBytes(attempt));
+            string hashAttemp = getHashString(hashBytes);
+
+            if (hashAttemp.StartsWith(block.Difficulty))
+            {
+               result = hashAttemp;
+               break;
+            }
+            nonce++;
+         }
+         block.Hash = result;
+         block.Nonce = nonce;
+         return block;
       }
    }
 }

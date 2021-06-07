@@ -9,8 +9,10 @@ namespace CoreBC
    class CommandListener
    {
       public P2PNetwork P2PNetwork { get; set; }
-      private Thread ServerThread { get; set; }
-      private Thread ClientThread { get; set; }
+      public CommandListener()
+      {
+         P2PNetwork = new P2PNetwork();
+      }
       public void ProcessCommand(string mainCmd)
       {
          string subCmd = "";
@@ -31,32 +33,31 @@ namespace CoreBC
 
       private void connectTo(string subCmd)
       {
-         string ipAddres = subCmd.Split(':')[0];
-         int port = Convert.ToInt32(subCmd.Split(':')[1]);
-
-         //string ipAddres = subCmd;
-         //var port = Convert.ToInt32(Program.Configuration.GetSection("Server:Port").Value);
-
-         if (P2PNetwork != null)
+         try
          {
-            P2PNetwork.ConnectTo(ipAddres, port);
+            string[] cmdArr = subCmd.Split(':');
+            string ipAddress = cmdArr[0];
+            int port = Convert.ToInt32(cmdArr[1]);
+            P2PNetwork.ConnectToServer(ipAddress, port);
+         }
+         catch (Exception)
+         {
+
+            throw;
          }
       }
 
       private void listenForConnections(string portString)
       {
-         int port = Convert.ToInt32(portString);
-         if (P2PNetwork == null)
+         try
          {
-            //var port = Convert.ToInt32(Program.Configuration.GetSection("Server:Port").Value);
-            
-            P2PNetwork = new P2PNetwork(port);
-            ServerThread = new Thread(P2PNetwork.StartListeningOn);
-            ServerThread.Start();
+            int port = Convert.ToInt32(portString);
+            P2PNetwork.ListenForClientsOn(port);
          }
-         else
+         catch (Exception)
          {
 
+            throw;
          }
       }
 

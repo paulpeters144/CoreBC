@@ -35,7 +35,7 @@ namespace CoreBC.Utils
 
       public static string GetDifficulty()
       {
-         return "00000000";
+         return "00000";
       }
 
       public static string GetCoinbaseAmount()

@@ -55,8 +55,10 @@ namespace CoreBC
       }
       public static void SaveNewBlock(GenesisBlockModel block)
       {
-         string path = Program.FilePath + $"\\Blockchain\\Blocks\\DactylBlocks_{DateTime.UtcNow.ToString("yyyyMMdd")}";
-         string miningStartTime = String.Format("{0:yyyy MMM dd}", UnixTimeStampToDateTime(block.Time));
+         string path = Program.FilePath + 
+            $"\\Blockchain\\Blocks\\DactylBlocks_{DateTime.UtcNow.ToString("yyyyMMdd")}";
+         string miningStartTime = String.Format("{0:yyyy MMM dd}", 
+            UnixTimeStampToDateTime(block.Time));
          string year = miningStartTime.Split(' ')[0];
          string month = miningStartTime.Split(' ')[1];
          string day = miningStartTime.Split(' ')[2];
@@ -97,8 +99,6 @@ namespace CoreBC
             ));
          return genesisObj.ToString(Formatting.Indented);
       }
-
-
 
       private static DateTime UnixTimeStampToDateTime(long unixTimeStamp)
       {

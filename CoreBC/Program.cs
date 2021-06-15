@@ -16,11 +16,36 @@ namespace CoreBC
    {
       public static IConfiguration Configuration { get; set; }
       public static string FilePath { get; set; }
+      public static string UserName = "paulp";
       static void Main(string[] args)
       {
          startup();
+         //PlayScenario playScenario = new PlayScenario();
+         //playScenario.MineMempool();
+
+
+
+
+
+
          PlayScenario playScenario = new PlayScenario();
-         playScenario.MineMempool();
+         bool result = playScenario.CheckBlock(1);
+         if (result)
+         {
+            Console.WriteLine("Block is good");
+         }
+         else
+         {
+            Console.WriteLine("Block is bad");
+         }
+
+
+
+
+
+
+
+
          CommandListener commandListener = new CommandListener();
          Console.WriteLine("Type 'help' to see availible commands.");
          while (true)

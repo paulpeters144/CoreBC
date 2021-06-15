@@ -41,6 +41,15 @@ namespace CoreBC
          }
       }
 
+      public bool CheckBlock(int height)
+      {
+         string filePath = Program.FilePath + "\\Blockchain\\Blocks\\DactylBlocks_20210604.json";
+         string allText = File.ReadAllText(filePath);
+         BlockerChecker blockerChecker = new BlockerChecker(allText);
+         blockerChecker.FullExamination();
+         return false;
+      }
+
       public void MineMempool()
       {
          var minerKey = new DactylKey("paulp");
@@ -77,7 +86,7 @@ namespace CoreBC
             Height = height,
             MerkleRoot = merkleRoot,
             TXs = mempoolTransactions,
-            Time = currentTime,
+            Time = 1622766012,
             Difficulty = Helpers.GetDifficulty(),
             Coinbase = coinbase
          };

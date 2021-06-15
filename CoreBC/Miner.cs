@@ -102,7 +102,7 @@ namespace CoreBC
          string mRoot = block.MerkleRoot;
          string difficulty = block.Difficulty;
          string time = new DateTimeOffset(DateTime.UtcNow).ToUnixTimeSeconds().ToString();
-         Int64 nonce = 0;
+         Int64 nonce = 204857;
          for ( ; ; )
          {
 

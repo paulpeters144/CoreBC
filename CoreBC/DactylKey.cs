@@ -160,11 +160,11 @@ namespace CoreBC
       }
       private decimal GetWalletBalance()
       {
-         string utxoPath = Program.FilePath + "\\Blockchain\\UTXOSet\\UTXOSet.json";
-         string utxoSet = File.ReadAllText(utxoPath);
-         JObject utxoObj = JObject.Parse(utxoSet);
+         string acctPath = Program.FilePath + "\\Blockchain\\ACCTSet\\ACCTSet.json";
+         string acctSet = File.ReadAllText(acctPath);
+         JObject acctObj = JObject.Parse(acctSet);
          string publicKeyString = GetPubKeyString();
-         decimal currentBalance = Convert.ToDecimal(utxoObj[publicKeyString]);
+         decimal currentBalance = Convert.ToDecimal(acctObj[publicKeyString]);
 
          string mempoolPath = Program.FilePath + "\\Blockchain\\Mempool\\mempool.json";
          string mempoolFile = File.ReadAllText(mempoolPath);

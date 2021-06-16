@@ -20,24 +20,24 @@ namespace CoreBC
       static void Main(string[] args)
       {
          startup();
-         //PlayScenario playScenario = new PlayScenario();
-         //playScenario.MineMempool();
-
-
-
-
-
-
          PlayScenario playScenario = new PlayScenario();
-         bool result = playScenario.CheckBlock(1);
-         if (result)
-         {
-            Console.WriteLine("Block is good");
-         }
-         else
-         {
-            Console.WriteLine("Block is bad");
-         }
+         playScenario.MineMempool();
+
+
+
+
+
+
+         //PlayScenario playScenario = new PlayScenario();
+         //bool result = playScenario.CheckBlock(1);
+         //if (result)
+         //{
+         //   Console.WriteLine("Block is good");
+         //}
+         //else
+         //{
+         //   Console.WriteLine("Block is bad");
+         //}
 
 
 

@@ -8,11 +8,11 @@ using System.Text;
 
 namespace CoreBC.Utils
 {
-   class UTXOUpdater
+   class AccountUpdater
    {
       public void RunUpdate()
       {
-         var utxoDictionary = new Dictionary<string, decimal>();
+         var acctDictionary = new Dictionary<string, decimal>();
          // get a list of all block txs
          var blockDates = Directory.GetDirectories($"{Program.FilePath}\\Blockchain\\Blocks");
          foreach (var blockFilePath in blockDates)
@@ -23,46 +23,46 @@ namespace CoreBC.Utils
             {
                var txIds = (JArray)block.Value["TXs"];
                List<string> blockTXs = txIds.Select(txs => (string)txs).ToList();
-               utxoDictionary = sumTransactions(utxoDictionary, blockTXs, block.Value);
+               acctDictionary = sumTransactions(acctDictionary, blockTXs, block.Value);
             }
          }
 
-         saveToUTXOSet(utxoDictionary);
+         saveToACCTSet(acctDictionary);
       }
 
-      private void saveToUTXOSet(Dictionary<string, decimal> utxoDictionary)
+      private void saveToACCTSet(Dictionary<string, decimal> acctDictionary)
       {
-         JObject utxoSetObj = new JObject();
+         JObject acctSetObj = new JObject();
 
-         foreach (var utxoSet in utxoDictionary)
-            utxoSetObj.Add(utxoSet.Key, utxoSet.Value);
+         foreach (var acctSet in acctDictionary)
+            acctSetObj.Add(acctSet.Key, acctSet.Value);
          
-         string dirPath = $"{Program.FilePath}\\Blockchain\\UTXOSet";
+         string dirPath = $"{Program.FilePath}\\Blockchain\\ACCTSet";
 
          if (!Directory.Exists(dirPath))
             Directory.CreateDirectory(dirPath);
 
-         string newFile = utxoSetObj.ToString(Formatting.Indented);
-         string filePath = dirPath + "\\UTXOSet.json";
+         string newFile = acctSetObj.ToString(Formatting.Indented);
+         string filePath = dirPath + "\\ACCTSet.json";
          File.WriteAllText(filePath, newFile);
       }
 
-      private Dictionary<string, decimal> sumTransactions(Dictionary<string, decimal> utxoDictionary, List<string> blockTXs, JToken value)
+      private Dictionary<string, decimal> sumTransactions(Dictionary<string, decimal> acctDictionary, List<string> blockTXs, JToken value)
       {
          string coinbaseAddress = value["Coinbase"]["Output"]["ToAddress"].ToString();
          decimal coinbaseAmount = Convert.ToDecimal(value["Coinbase"]["Output"]["Amount"]);
          string coinbaseTxId = value["Coinbase"]["TransactionId"].ToString();
          blockTXs.Remove(coinbaseTxId);
 
-         if (!utxoDictionary.ContainsKey(coinbaseAddress))
-            utxoDictionary.Add(coinbaseAddress, coinbaseAmount);
+         if (!acctDictionary.ContainsKey(coinbaseAddress))
+            acctDictionary.Add(coinbaseAddress, coinbaseAmount);
 
          foreach (var tx in blockTXs)
          {
 
          }
 
-         return utxoDictionary;
+         return acctDictionary;
       }
    }
 }

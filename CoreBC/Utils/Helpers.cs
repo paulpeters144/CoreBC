@@ -35,7 +35,7 @@ namespace CoreBC.Utils
 
       public static string GetDifficulty()
       {
-         return "00000";
+         return "000";
       }
 
       public static string GetCoinbaseAmount()
@@ -45,7 +45,12 @@ namespace CoreBC.Utils
 
       public static string GetNexBlockFileName()
       {
-         return $"{Program.FilePath}\\Blockchain\\Blocks\\DactylBlocks_{DateTime.UtcNow.ToString("yyyyMMdd")}.json";
+         return $"DactylBlocks_{DateTime.UtcNow.ToString("yyyyMMdd")}.json";
+      }
+
+      public static string GetBlockDir()
+      {
+         return $"{Program.FilePath}\\Blockchain\\Blocks\\";
       }
    }
 }

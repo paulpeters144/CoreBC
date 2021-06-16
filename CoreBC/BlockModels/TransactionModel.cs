@@ -5,7 +5,7 @@ using System.Text;
 
 namespace CoreBC.BlockModels
 {
-   class TransactionModel
+   public class TransactionModel
    {
       public string TransactionId { get; set; }
       public string Signature { get; set; }
@@ -16,18 +16,18 @@ namespace CoreBC.BlockModels
       public decimal FeePercent = 0.00025M;
    }
 
-   class Input 
+   public class Input 
    {
       public string FromAddress { get; set; }
       public string Amount { get; set; }
    }
-   class Output 
+   public class Output 
    {
       public string ToAddress { get; set; }
       public string Amount { get; set; }
    }
 
-   class CoinbaseModel
+   public class CoinbaseModel
    {
       public string TransactionId { get; set; }
       public string BlockHash { get; set; }

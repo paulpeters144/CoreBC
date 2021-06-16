@@ -115,7 +115,11 @@ namespace CoreBC
                result = hashAttemp;
                break;
             }
-            nonce++;
+            else
+            {
+               nonce++;
+            }
+
          }
          block.Hash = result;
          block.Nonce = nonce;

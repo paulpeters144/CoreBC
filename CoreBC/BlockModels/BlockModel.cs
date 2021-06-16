@@ -4,7 +4,7 @@ using System.Text;
 
 namespace CoreBC.BlockModels
 {
-   class BlockModel
+   public class BlockModel
    {
       public string Hash { get; set; } // shawd from 1) PreviousHash 2) merkel 3) timestamp 4) difficulty 5) nonce
       public string PreviousHash { get; set; }
@@ -19,7 +19,7 @@ namespace CoreBC.BlockModels
       public CoinbaseModel Coinbase { get; set; }
    }
 
-   class GenesisBlockModel 
+   public class GenesisBlockModel 
    {
       public string Hash { get; set; } // shawd from 1) merkel 2) timestamp 3) difficulty 4) nonce
       public Int64 Confirmations { get; set; }

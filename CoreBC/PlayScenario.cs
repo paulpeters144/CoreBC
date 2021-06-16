@@ -33,7 +33,7 @@ namespace CoreBC
             decimal amount = num * .000001M;
             var tx = senderKey.SendMoneyTo(recPubKey, 3);
             if (tx != null)
-               BlockchainRecord.SaveToMempool(tx);
+               new BlockchainRecord().SaveToMempool(tx);
             else
             {
 
@@ -52,6 +52,8 @@ namespace CoreBC
 
       public void MineMempool()
       {
+         string filePath = Helpers.GetBlockDir() + Helpers.GetNexBlockFileName();
+         new BlockchainRecord().UpdateFileMetaData(filePath);
          var minerKey = new DactylKey("paulp");
 
          string mostRecentFile = Directory
@@ -75,7 +77,8 @@ namespace CoreBC
 
          List<TransactionModel> memPool = getMemPool();
 
-         string[] mempoolTransactions = memPool.Select(x => x.TransactionId).Prepend(coinbase.TransactionId).ToArray();
+         string[] mempoolTransactions = 
+            memPool.Select(x => x.TransactionId).Prepend(coinbase.TransactionId).ToArray();
          
          string merkleRoot = getMerkleFrom(mempoolTransactions);
          var nextBlock = new BlockModel()
@@ -94,32 +97,9 @@ namespace CoreBC
          Miner miner = new Miner();
          nextBlock = miner.Mine(nextBlock);
          nextBlock.Coinbase.BlockHash = nextBlock.Hash;
-         nextBlock.Coinbase.TransactionId = Helpers.GetSHAStringFromString($"{nextBlock.Height}{nextBlock.MerkleRoot}");
-         string blockJson = getMinedTransactions(nextBlock);
-         //File.WriteAllText(Helpers.GetNexBlockFileName(), blockJson);
-      }
-
-      private string getMinedTransactions(BlockModel nextBlock)
-      {
-         string mempoolPath = $"{Program.FilePath}\\Blockchain\\Mempool\\mempool.json";
-
-         if (!File.Exists(mempoolPath))
-            return "";
-
-         string mempoolJson = File.ReadAllText(mempoolPath);
-         JObject mempoolObj = JObject.Parse(mempoolJson);
-         JObject result = JObject.Parse(JsonConvert.SerializeObject(nextBlock));
-
-         JObject txObj = new JObject();
-         foreach (var tx in mempoolObj)
-         {
-            if (nextBlock.TXs.Contains(tx.Key))
-               txObj.Add(new JProperty(tx.Key, tx.Value));
-         }
-
-         result.Add(new JProperty("Transactions", txObj));
-
-         return result.ToString(Formatting.Indented);
+         nextBlock.Coinbase.TransactionId = 
+            Helpers.GetSHAStringFromString($"{nextBlock.Height}{nextBlock.MerkleRoot}");
+         new BlockchainRecord().SaveNewBlock(nextBlock);
       }
 
       private string getMerkleFrom(string[] mempoolTransactions)
@@ -257,16 +237,16 @@ namespace CoreBC
          {
             coinbase.BlockHash = officialGenesisBlockHash;
             genesisBlock.Coinbase = coinbase;
-            BlockchainRecord.SaveNewBlock(genesisBlock);
+            new BlockchainRecord().SaveNewBlock(genesisBlock);
          }
 
-         updateUTXOs();
+         updateACCTs();
       }
 
-      private static void updateUTXOs()
+      private static void updateACCTs()
       {
-         UTXOUpdater utxoUpdater = new UTXOUpdater();
-         utxoUpdater.RunUpdate();
+         AccountUpdater acctUpdater = new AccountUpdater();
+         acctUpdater.RunUpdate();
       }
    }
 }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using CoreBC.BlockModels;
 using CoreBC.Utils;
@@ -52,9 +53,50 @@ namespace CoreBC
 
       public void SaveNewBlock(BlockModel block)
       {
-         string blockJson = getMinedTransactions(block);
          string filePath = Helpers.GetBlockDir() + Helpers.GetNexBlockFileName();
-         File.WriteAllText(filePath, blockJson);
+         BlockChecker blockChecker = new BlockChecker();
+         if (blockChecker.SaysHeaderIsGood(block))
+         {
+            blockChecker.ConfirmPriorBlocks();
+            string blockJson = getMinedTransactions(block);
+            if (blockChecker.TransactionAreTamperFree(blockJson, block.Hash))
+            {
+               removeAllMinedTXs(blockJson);
+               File.WriteAllText(filePath, blockJson);
+            }
+            else
+            {
+
+            }
+         }
+      }
+
+      private void removeAllMinedTXs(string blockJson)
+      {
+         JObject mineBlock = JObject.Parse(blockJson);
+         JObject mempool = JObject.Parse(File.ReadAllText(Helpers.GetMempooFile()));
+
+         List<string> mempoolTxs = new List<string>();
+         foreach (var tx in mempool)
+            mempoolTxs.Add(tx.Key);
+
+         foreach (var block in mineBlock)
+         {
+            string hash = block.Key;
+            if (hash.ToLower().Contains("heightrange"))
+               continue;
+
+            List<string> newBlockTxList = new List<string>();
+            var txArray = block.Value["TXs"];
+            foreach (var tx in txArray)
+               newBlockTxList.Add(tx.ToString());
+
+            foreach (var tx in mempoolTxs)
+               if (newBlockTxList.Contains(tx))
+                  mempool.Remove(tx);
+         }
+         string newMempool = mempool.ToString(Formatting.Indented);
+         File.WriteAllText(Helpers.GetMempooFile(), newMempool);
       }
 
       private string getMinedTransactions(BlockModel block)
@@ -71,6 +113,10 @@ namespace CoreBC
          foreach (var tx in mempoolObj)
             if (block.TXs.Contains(tx.Key))
                txObj.Add(new JProperty(tx.Key, tx.Value));
+
+         decimal fees = 0;
+         foreach (var tx in txObj)
+            fees += Convert.ToDecimal(tx.Value["Fee"]);
 
          JObject result = new JObject(
                   new JProperty(block.Hash, new JObject(
@@ -90,7 +136,8 @@ namespace CoreBC
                                  new JProperty("ToAddress", block.Coinbase.Output.ToAddress),
                                  new JProperty("Amount", block.Coinbase.Output.Amount)
                               )
-                           )
+                           ),
+                        new JProperty("TotalFees", Helpers.FormatDactylDigits(fees))
                         )
                      ),
                      new JProperty("Transactions", txObj)
@@ -122,13 +169,17 @@ namespace CoreBC
          if (!File.Exists(filePath))
             File.Create(filePath).Dispose();
 
-         string blockJson = CreateJsonBlock(block);
+         string blockJson = CreateJsonGBlock(block);
          File.WriteAllText(filePath, blockJson);
       }
 
       public void UpdateFileMetaData(string filePath)
       {
          string json = File.ReadAllText(filePath);
+         
+         if (json.Contains("HeightRange"))
+            json = Regex.Replace(json, "\"HeightRange\": \"[0-9]+:[0-9]+\",", "");
+         
          JObject fileBlocks = JObject.Parse(json);
          Int64 lowestBlock = Int64.MaxValue;
          Int64 heighestBlock = Int64.MinValue;
@@ -145,7 +196,7 @@ namespace CoreBC
          }
 
          JObject newObj = new JObject(new JProperty("HeightRange", $"{lowestBlock}:{heighestBlock}"));
-         
+
          foreach (var block in fileBlocks)
             newObj.Add(new JProperty(block.Key, block.Value));
 
@@ -153,7 +204,7 @@ namespace CoreBC
          File.WriteAllText(filePath, fileWithNewMetaData);
       }
 
-      public string CreateJsonBlock(GenesisBlockModel genesisBlock)
+      public string CreateJsonGBlock(GenesisBlockModel genesisBlock)
       {
          JObject genesisObj = new JObject(
                new JProperty(genesisBlock.Hash, new JObject(
@@ -175,14 +226,6 @@ namespace CoreBC
                   )))
             ));
          return genesisObj.ToString(Formatting.Indented);
-      }
-
-      private DateTime UnixTimeStampToDateTime(long unixTimeStamp)
-      {
-         // Unix timestamp is seconds past epoch
-         System.DateTime dtDateTime = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
-         dtDateTime = dtDateTime.AddSeconds(unixTimeStamp).ToLocalTime();
-         return dtDateTime;
       }
    }
 }

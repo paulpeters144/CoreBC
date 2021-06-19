@@ -167,6 +167,9 @@ namespace CoreBC
          decimal currentBalance = Convert.ToDecimal(acctObj[publicKeyString]);
 
          string mempoolPath = Program.FilePath + "\\Blockchain\\Mempool\\mempool.json";
+         if (!File.Exists(mempoolPath))
+            File.Create(mempoolPath).Dispose();
+
          string mempoolFile = File.ReadAllText(mempoolPath);
 
          JObject mempoolObj;

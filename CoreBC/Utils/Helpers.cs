@@ -52,5 +52,10 @@ namespace CoreBC.Utils
       {
          return $"{Program.FilePath}\\Blockchain\\Blocks\\";
       }
+
+      public static string GetMempooFile()
+      {
+         return $"{Program.FilePath}\\Blockchain\\Mempool\\mempool.json";
+      }
    }
 }

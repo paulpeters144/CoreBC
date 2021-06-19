@@ -20,14 +20,20 @@ namespace CoreBC
       static void Main(string[] args)
       {
          startup();
-         PlayScenario playScenario = new PlayScenario();
-         playScenario.MineMempool();
 
-
-
-
-
-
+         GenesisBlock genesisBlock = new GenesisBlock();
+         genesisBlock.Generate();
+         AccountUpdater ctUpdater = new AccountUpdater();
+         ctUpdater.RunUpdate();
+         for (int i = 0; i < 1000; i++)
+         {
+            PlayScenario playScenario = new PlayScenario();
+            playScenario.CreateTx();
+            playScenario.MineMempool();
+            AccountUpdater acctUpdater = new AccountUpdater();
+            acctUpdater.RunUpdate();
+         }
+         
          //PlayScenario playScenario = new PlayScenario();
          //bool result = playScenario.CheckBlock(1);
          //if (result)
@@ -38,13 +44,6 @@ namespace CoreBC
          //{
          //   Console.WriteLine("Block is bad");
          //}
-
-
-
-
-
-
-
 
          CommandListener commandListener = new CommandListener();
          Console.WriteLine("Type 'help' to see availible commands.");

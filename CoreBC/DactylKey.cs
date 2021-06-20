@@ -23,7 +23,6 @@ namespace CoreBC
       {
          findKey(keyName);
       }
-
       public TransactionModel SignTransaction(TransactionModel tx)
       {
          string message = createMessageFrom(tx);
@@ -67,17 +66,6 @@ namespace CoreBC
          if (txVerified && hasEnoughDYL)
             return tx;
          else  return null;
-      }
-
-      public bool VerifyTransaction(string transaction)
-      {
-         TransactionModel transactionModel = JsonConvert.DeserializeObject<TransactionModel>(transaction);
-         string message = createMessageFrom(transactionModel);
-         var document = Encoding.UTF8.GetBytes(message);
-         byte[] hashedDocument = SHA256.Create().ComputeHash(document);
-         byte[] txSig = Convert.FromBase64String(transactionModel.Signature);
-         bool result = VerifySignature(hashedDocument, txSig);
-         return result;
       }
 
       public bool VerifyTransaction(TransactionModel tx)
@@ -216,7 +204,7 @@ namespace CoreBC
             rsa.PersistKeyInCsp = false;
             PublicKey = rsa.ExportParameters(false);
             PrivateKey = rsa.ExportParameters(true);
-            string newKey = CryptoApi.RSAKeys.ExportPrivateKey(rsa);
+            string newKey = RSAKeys.ExportPrivateKey(rsa);
             File.WriteAllText(keyPath, newKey);
          }
       }

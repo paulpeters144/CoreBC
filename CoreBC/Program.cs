@@ -21,11 +21,11 @@ namespace CoreBC
       {
          startup();
 
-         GenesisBlock genesisBlock = new GenesisBlock();
-         genesisBlock.Generate();
-         AccountUpdater ctUpdater = new AccountUpdater();
-         ctUpdater.RunUpdate();
-         for (int i = 0; i < 1000; i++)
+         //GenesisBlock genesisBlock = new GenesisBlock();
+         //genesisBlock.Generate();
+         //AccountUpdater ctUpdater = new AccountUpdater();
+         //ctUpdater.RunUpdate();
+         for (int i = 0; i < 10; i++)
          {
             PlayScenario playScenario = new PlayScenario();
             playScenario.CreateTx();

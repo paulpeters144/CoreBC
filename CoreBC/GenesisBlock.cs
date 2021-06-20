@@ -38,7 +38,7 @@ namespace CoreBC
             TXs = new string[] { coinbaseTxId },
             MerkleRoot = merkelRoot,
             Time = new DateTimeOffset(DateTime.UtcNow).ToUnixTimeSeconds()
-      };
+         };
 
          Miner miner = new Miner();
          genesisBlock = miner.Mine(genesisBlock);

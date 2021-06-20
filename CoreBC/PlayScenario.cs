@@ -85,12 +85,10 @@ namespace CoreBC
          Miner miner = new Miner();
          nextBlock = miner.Mine(nextBlock);
          nextBlock.Coinbase.BlockHash = nextBlock.Hash;
-         nextBlock.Coinbase.TransactionId = 
-            Helpers.GetSHAStringFromString($"{nextBlock.Height}{nextBlock.MerkleRoot}");
 
          BlockchainRecord blockchainRecord = new BlockchainRecord();
          blockchainRecord.SaveNewBlock(nextBlock);
-         blockchainRecord.UpdateFileMetaData(filePath);
+         //blockchainRecord.UpdateFileMetaData(filePath);
       }
 
       private string getMerkleFrom(string[] mempoolTransactions)

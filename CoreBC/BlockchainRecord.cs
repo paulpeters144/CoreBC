@@ -66,7 +66,7 @@ namespace CoreBC
             }
             else
             {
-
+               // potentially put some kind of reject block logic here
             }
          }
       }

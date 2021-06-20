@@ -79,11 +79,18 @@ namespace CoreBC
          if (txCount != txArray.Length - 1)
             return false;
 
+         if (!coinbaseIsGood(txs))
+            return false;
 
          foreach (var txHash in txArray)
          {
             var txObj = txs["Transactions"];
             string txId = txHash.ToString();
+
+            string cbId = txs["Coinbase"]["TransactionId"].ToString();
+            if (txId == cbId)
+               continue;
+
             var transaction = txObj[txId];
             TransactionModel txModel = new TransactionModel
             {
@@ -111,6 +118,16 @@ namespace CoreBC
          }
 
          return true;
+      }
+
+      private bool coinbaseIsGood(JToken txs)
+      {
+         int blockHeight = Convert.ToInt32(txs["Height"]);
+         string toAddress = txs["Coinbase"]["Output"]["ToAddress"].ToString();
+         string coinbaseSig = $"{blockHeight}_belongs_to_{toAddress}";
+         string checkId = Helpers.GetSHAStringFromString(coinbaseSig);
+         string cbTxId = txs["Coinbase"]["TransactionId"].ToString();
+         return cbTxId == checkId;
       }
 
       private bool txAreTamperFree(BlockModel block)

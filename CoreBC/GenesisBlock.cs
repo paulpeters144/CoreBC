@@ -23,7 +23,7 @@ namespace CoreBC
          };
 
          string genesisCoinbase = $"genesis_coinbase_{coinbase.Output.ToAddress}_gets_{coinbase.Output.Amount}";
-         byte[] genesisCBBytes = Encoding.UTF8.GetBytes(genesisCoinbase);
+         byte[] genesisCBBytes = Encoding.ASCII.GetBytes(genesisCoinbase);
          byte[] shawedCoinbase = SHA256.Create().ComputeHash(genesisCBBytes);
          string coinbaseTxId = Helpers.GetSHAStringFromBytes(shawedCoinbase);
          coinbase.TransactionId = coinbaseTxId;
@@ -47,7 +47,7 @@ namespace CoreBC
             genesisBlock.Time +
             genesisBlock.Difficulty +
             genesisBlock.Nonce;
-         byte[] answerBytes = SHA256.Create().ComputeHash(Encoding.UTF8.GetBytes(checkAnswer));
+         byte[] answerBytes = SHA256.Create().ComputeHash(Encoding.ASCII.GetBytes(checkAnswer));
 
          string officialGenesisBlockHash = Helpers.GetSHAStringFromBytes(answerBytes);
          genesisBlock.Hash = officialGenesisBlockHash;

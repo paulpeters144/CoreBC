@@ -25,7 +25,7 @@ namespace CoreBC.Utils
 
       public static string GetSHAStringFromString(string text)
       {
-         byte[] textToBytes = Encoding.UTF8.GetBytes(text);
+         byte[] textToBytes = Encoding.ASCII.GetBytes(text);
          byte[] textByesShawed = SHA256.Create().ComputeHash(textToBytes);
          return GetSHAStringFromBytes(textByesShawed);
       }

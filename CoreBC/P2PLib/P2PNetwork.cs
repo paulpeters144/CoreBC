@@ -10,27 +10,32 @@ namespace CoreBC.P2PLib
 {
    class P2PNetwork
    {
-      private Hashtable ConnectedServers;
-      private PeerServer PeerServer;
-      private Thread ServerThread;
-      
-      public P2PNetwork()
+      public string ID { get; set; }
+      public PeerClient Client { get; set; }
+      public PeerServer Server { get; set; }
+
+      public int BuffSize { get; set; }
+      public P2PNetwork(int buffSize, int maxClientCount, int maxConnectCount)
       {
-         ConnectedServers = new Hashtable();
+         ID = Guid.NewGuid().ToString("N").ToUpper();
+         BuffSize = buffSize;
+         Client = new PeerClient(ID, BuffSize, maxConnectCount);
+         Server = new PeerServer(ID, BuffSize, maxClientCount);
       }
 
-      public void ConnectToServer(string ipAddres, int serverPort)
+      public void ListenOn(int port)
       {
-         PeerClient peerClient = new PeerClient(ipAddres, serverPort);
-         ConnectedServers.Add(ipAddres, peerClient);
-         peerClient.ConnectToServer();
+         Server.ListenOn(port);
       }
 
-      public void ListenForClientsOn(int localPort)
+      public void ConnectTo(string ip, int port)
       {
-         PeerServer = new PeerServer(localPort);
-         ServerThread = new Thread(PeerServer.StartServer);
-         ServerThread.Start();
+         Client.Connect(ip, port);
+      }
+
+      public void SendMessage(string msg)
+      {
+         Client.SendMessage(msg);
       }
    }
 }

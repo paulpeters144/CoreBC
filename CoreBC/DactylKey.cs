@@ -26,7 +26,7 @@ namespace CoreBC
       public TransactionModel SignTransaction(TransactionModel tx)
       {
          string message = createMessageFrom(tx);
-         var document = Encoding.UTF8.GetBytes(message);
+         var document = Encoding.ASCII.GetBytes(message);
          byte[] hashedDocument = SHA256.Create().ComputeHash(document);
          byte[] messageSigned = SignData(hashedDocument);
          string signature = Convert.ToBase64String(messageSigned);
@@ -71,7 +71,7 @@ namespace CoreBC
       public bool VerifyTransaction(TransactionModel tx)
       {
          string message = createMessageFrom(tx);
-         var document = Encoding.UTF8.GetBytes(message);
+         var document = Encoding.ASCII.GetBytes(message);
          byte[] hashedDocument = SHA256.Create().ComputeHash(document);
          byte[] txSig = Convert.FromBase64String(tx.Signature);
          bool result = VerifySignature(hashedDocument, txSig);
@@ -88,7 +88,7 @@ namespace CoreBC
          sb.Append(tx.Signature);
          
          string txFullMessage = sb.ToString();
-         byte[] txFullMessageInBytes = Encoding.UTF8.GetBytes(txFullMessage);
+         byte[] txFullMessageInBytes = Encoding.ASCII.GetBytes(txFullMessage);
          byte[] txIdInBytes = SHA256.Create().ComputeHash(txFullMessageInBytes);
          string txId = Helpers.GetSHAStringFromBytes(txIdInBytes);
          tx.TransactionId = txId;

@@ -78,7 +78,7 @@ namespace CoreBC
          for ( ; ; )
          {
             string attempt = $"{mRoot}{time}{difficulty}{nonce}";
-            //byte[] hashBytes = SHA256.Create().ComputeHash(Encoding.UTF8.GetBytes(attempt));
+            //byte[] hashBytes = SHA256.Create().ComputeHash(Encoding.ASCII.GetBytes(attempt));
             string hashAttemp = Helpers.GetSHAStringFromString(attempt);
 
             if (hashAttemp.StartsWith(genesisBlock.Difficulty))
@@ -103,7 +103,7 @@ namespace CoreBC
          {
 
             string attempt = $"{prevHash}{mRoot}{block.Time}{difficulty}{nonce}";
-            byte[] hashBytes = SHA256.Create().ComputeHash(Encoding.UTF8.GetBytes(attempt));
+            byte[] hashBytes = SHA256.Create().ComputeHash(Encoding.ASCII.GetBytes(attempt));
             string hashAttemp = getHashString(hashBytes);
 
             if (hashAttemp.StartsWith(block.Difficulty))

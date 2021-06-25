@@ -11,7 +11,7 @@ namespace CoreBC
       public P2PNetwork P2PNetwork { get; set; }
       public CommandListener()
       {
-         P2PNetwork = new P2PNetwork();
+         P2PNetwork = new P2PNetwork(2058, 10, 10);
       }
       public void ProcessCommand(string mainCmd)
       {
@@ -33,32 +33,12 @@ namespace CoreBC
 
       private void connectTo(string subCmd)
       {
-         try
-         {
-            string[] cmdArr = subCmd.Split(':');
-            string ipAddress = cmdArr[0];
-            int port = Convert.ToInt32(cmdArr[1]);
-            P2PNetwork.ConnectToServer(ipAddress, port);
-         }
-         catch (Exception)
-         {
 
-            throw;
-         }
       }
 
       private void listenForConnections(string portString)
       {
-         try
-         {
-            int port = Convert.ToInt32(portString);
-            P2PNetwork.ListenForClientsOn(port);
-         }
-         catch (Exception)
-         {
 
-            throw;
-         }
       }
 
       private void showAllCommands()

@@ -33,17 +33,6 @@ namespace CoreBC
             AccountUpdater acctUpdater = new AccountUpdater();
             acctUpdater.RunUpdate();
          }
-         
-         //PlayScenario playScenario = new PlayScenario();
-         //bool result = playScenario.CheckBlock(1);
-         //if (result)
-         //{
-         //   Console.WriteLine("Block is good");
-         //}
-         //else
-         //{
-         //   Console.WriteLine("Block is bad");
-         //}
 
          CommandListener commandListener = new CommandListener();
          Console.WriteLine("Type 'help' to see availible commands.");

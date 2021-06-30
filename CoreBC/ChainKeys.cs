@@ -1,5 +1,6 @@
 ﻿using CoreBC.BlockModels;
 using CoreBC.CryptoApi;
+using CoreBC.DataAccess;
 using CoreBC.Utils;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -13,15 +14,18 @@ using System.Xml;
 
 namespace CoreBC
 {
-   internal class DactylKey
+   internal class ChainKeys
    {
       public int KeySize = 512;
       public RSAParameters PublicKey;
+      public string KeyName { get; set; }
       private RSAParameters PrivateKey;
-
-      public DactylKey(string keyName)
+      private IDataAccess DB;
+      public ChainKeys(string keyName)
       {
-         findKey(keyName);
+         KeyName = keyName;
+         findKey();
+         DB = new BlockChainFiles();
       }
       public TransactionModel SignTransaction(TransactionModel tx)
       {
@@ -39,13 +43,13 @@ namespace CoreBC
          Input input = new Input
          {
             FromAddress = GetPubKeyString(),
-            Amount = Helpers.FormatDactylDigits(amount)
+            Amount = Helpers.FormatDigits(amount)
          };
 
          Output output = new Output
          {
             ToAddress = recPubKey,
-            Amount = Helpers.FormatDactylDigits(amount)
+            Amount = Helpers.FormatDigits(amount)
          };
 
          TransactionModel tx = new TransactionModel
@@ -57,11 +61,12 @@ namespace CoreBC
 
          tx = SignTransaction(tx);
          tx = CreateTransactionId(tx);
-         tx.Fee = Helpers.FormatDactylDigits(Convert.ToDecimal(input.Amount) * tx.FeePercent);
+         tx.Fee = Helpers.FormatDigits(Convert.ToDecimal(input.Amount) * Helpers.GetFeePercent());
 
          bool txVerified = VerifyTransaction(tx);
          decimal totalTradeAmount = (Convert.ToDecimal(input.Amount) + Convert.ToDecimal(tx.Fee));
-         bool hasEnoughDYL = GetWalletBalance() > totalTradeAmount;
+         string pubKey = GetPubKeyString();
+         bool hasEnoughDYL = DB.GetWalletBalanceFor(pubKey) > totalTradeAmount;
 
          if (txVerified && hasEnoughDYL)
             return tx;
@@ -115,14 +120,14 @@ namespace CoreBC
          return result;
       }
 
-      private void findKey(string keyName)
+      private void findKey()
       {
          var path = Program.FilePath;
 
          if (!Directory.Exists(path))
             Directory.CreateDirectory(path);
 
-         string pathToKey = $"{path}\\{keyName}.pem";
+         string pathToKey = $"{path}\\{KeyName}.pem";
 
          if (!File.Exists(pathToKey))
          {
@@ -131,7 +136,7 @@ namespace CoreBC
          }
          else
          {
-            loadKeySetFrom($"{path}\\{keyName}.pem");
+            loadKeySetFrom($"{path}\\{KeyName}.pem");
          }
       }
 
@@ -145,35 +150,6 @@ namespace CoreBC
             rsaFormatter.SetHashAlgorithm("SHA256");
             return rsaFormatter.CreateSignature(hashOfDataToSign);
          }
-      }
-      private decimal GetWalletBalance()
-      {
-         string acctPath = Program.FilePath + "\\Blockchain\\ACCTSet\\ACCTSet.json";
-         string acctSet = File.ReadAllText(acctPath);
-         JObject acctObj = JObject.Parse(acctSet);
-         string publicKeyString = GetPubKeyString();
-         decimal currentBalance = Convert.ToDecimal(acctObj[publicKeyString]);
-
-         string mempoolPath = Program.FilePath + "\\Blockchain\\Mempool\\mempool.json";
-         if (!File.Exists(mempoolPath))
-            File.Create(mempoolPath).Dispose();
-
-         string mempoolFile = File.ReadAllText(mempoolPath);
-
-         JObject mempoolObj;
-         if (String.IsNullOrEmpty(mempoolFile))
-            mempoolObj = new JObject();
-         else
-            mempoolObj = JObject.Parse(mempoolFile);
-
-         foreach (var tx in mempoolObj)
-         {
-            string txPubKey = tx.Value["Input"]["FromAddress"].ToString();
-            if (String.Equals(txPubKey, publicKeyString))
-               currentBalance -= Convert.ToDecimal(tx.Value["Input"]["Amount"]);
-         }
-
-         return currentBalance;
       }
 
       private bool VerifySignature(byte[] hashOfDataToSign, byte[] signature)

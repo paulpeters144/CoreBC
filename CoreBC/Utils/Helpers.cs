@@ -1,5 +1,7 @@
-﻿using System;
+﻿using CoreBC.BlockModels;
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -7,7 +9,7 @@ namespace CoreBC.Utils
 {
    public static class Helpers
    {
-      public static string FormatDactylDigits(decimal amount)
+      public static string FormatDigits(decimal amount)
       {
          decimal rounded = Math.Round(amount, 10, MidpointRounding.ToEven);
          return String.Format("{0:0.0000000000}", rounded);
@@ -38,14 +40,58 @@ namespace CoreBC.Utils
          return "000";
       }
 
+      public static string GetDifficulty(BlockModel[] blocks)
+      {
+         int maxBlockCount = 2016;
+         int maxBlockTimeSeconds = 600;
+         List<BlockModel> blockList = blocks.OrderByDescending(b => b.Time).ToList();
+         string lastDifficulty = blockList[0].Difficulty;
+         
+         if (blocks.Length < maxBlockCount)
+            return lastDifficulty;
+
+         List<long> blockGenTimes = new List<long>();
+         blockList.Reverse();
+         for (int i = 0; i < blockList.Count - 1; i++)
+         {
+            long secondDiff = blockList[i].Time - blockList[i + 1].Time;
+            blockGenTimes.Add(secondDiff);
+            if (blockGenTimes.Count > maxBlockCount)
+               break;
+         }
+
+         long averageBlockTime =
+               (long)Math.Floor(
+                     Convert.ToDecimal(blockGenTimes.Sum() / blockGenTimes.Count)
+                  );
+
+         string result = string.Empty;
+
+         if (averageBlockTime > maxBlockTimeSeconds)
+            result = lastDifficulty + "0";
+         else if (!String.IsNullOrEmpty(lastDifficulty))
+            result = lastDifficulty.Substring(0, lastDifficulty.Length - 1);
+
+         return result;
+      }
+
       public static string GetCoinbaseAmount()
       {
          return "300";
       }
 
-      public static string GetNexBlockFileName()
+      public static decimal GetFeePercent()
       {
-         return $"DactylBlocks_{DateTime.UtcNow.ToString("yyyyMMdd")}.json";
+         return 0.00025M;
+      }
+      public static string GetBlockchainFilePath()
+      {
+         return GetBlockDir() + $"DotNetBlockChain.json";
+      }
+
+      public static string GetAcctSetFile()
+      {
+         return $"{Program.FilePath}\\Blockchain\\ACCTSet\\ACCTSet.json";
       }
 
       public static string GetBlockDir()
@@ -56,6 +102,18 @@ namespace CoreBC.Utils
       public static string GetMempooFile()
       {
          return $"{Program.FilePath}\\Blockchain\\Mempool\\mempool.json";
+      }
+
+      public static decimal GetMineReward(long height)
+      {
+         decimal baseReward = 50;
+         int halving = 210000;
+         while (height > halving)
+         {
+            baseReward *= 0.5M;
+            height -= halving;
+         }
+         return baseReward;
       }
    }
 }

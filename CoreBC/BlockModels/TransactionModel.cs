@@ -13,7 +13,6 @@ namespace CoreBC.BlockModels
       public Input Input { get; set; }
       public Output Output { get; set; }
       public string Fee { get; set; }
-      public decimal FeePercent = 0.00025M;
    }
 
    public class Input 

@@ -1,4 +1,5 @@
 ﻿using CoreBC.BlockModels;
+using CoreBC.DataAccess;
 using CoreBC.Utils;
 using System;
 using System.Collections.Generic;
@@ -9,27 +10,34 @@ namespace CoreBC
 {
    class GenesisBlock
    {
+      public IDataAccess DB;
+      public GenesisBlock()
+      {
+         DB = new BlockChainFiles(
+               Helpers.GetBlockchainFilePath(),
+               Helpers.GetMempooFile(),
+               Helpers.GetAcctSetFile()
+            );
+      }
       public void Generate()
       {
-         DactylKey dactylKey = new DactylKey("paulp");
+         ChainKeys dactylKey = new ChainKeys("paulp");
          string pubKey = dactylKey.GetPubKeyString();
          CoinbaseModel coinbase = new CoinbaseModel
          {
             Output = new Output
             {
                ToAddress = pubKey,
-               Amount = Helpers.FormatDactylDigits(300)
+               Amount = Helpers.FormatDigits(Helpers.GetMineReward(0))
             }
          };
 
-         string genesisCoinbase = $"genesis_coinbase_{coinbase.Output.ToAddress}_gets_{coinbase.Output.Amount}";
-         byte[] genesisCBBytes = Encoding.ASCII.GetBytes(genesisCoinbase);
-         byte[] shawedCoinbase = SHA256.Create().ComputeHash(genesisCBBytes);
-         string coinbaseTxId = Helpers.GetSHAStringFromBytes(shawedCoinbase);
+         string genesisCoinbase = $"{0}_belongs_to_{pubKey}";
+         string coinbaseTxId = Helpers.GetSHAStringFromString(genesisCoinbase);
          coinbase.TransactionId = coinbaseTxId;
-         string merkelRoot = getMerkleFrom(new string[] { coinbaseTxId });
+         string merkelRoot = Helpers.GetSHAStringFromString($"{coinbaseTxId}{coinbaseTxId}");
 
-         GenesisBlockModel genesisBlock = new GenesisBlockModel
+         BlockModel genesisBlock = new BlockModel
          {
             Confirmations = 0,
             TransactionCount = 1,
@@ -37,11 +45,11 @@ namespace CoreBC
             Difficulty = Helpers.GetDifficulty(),
             TXs = new string[] { coinbaseTxId },
             MerkleRoot = merkelRoot,
-            Time = new DateTimeOffset(DateTime.UtcNow).ToUnixTimeSeconds()
+            Time = Helpers.GetCurrentUTC()
          };
 
          Miner miner = new Miner();
-         genesisBlock = miner.Mine(genesisBlock);
+         genesisBlock = miner.MineGBlock(genesisBlock);
          string checkAnswer =
             genesisBlock.MerkleRoot +
             genesisBlock.Time +
@@ -56,10 +64,8 @@ namespace CoreBC
          {
             coinbase.BlockHash = officialGenesisBlockHash;
             genesisBlock.Coinbase = coinbase;
-            new BlockchainRecord().SaveNewBlock(genesisBlock);
+            DB.SaveBlock(genesisBlock);
          }
-
-         updateACCTs();
       }
 
       private string getMerkleFrom(string[] mempoolTransactions)
@@ -84,12 +90,6 @@ namespace CoreBC
 
          string[] hashArray = hashList.ToArray();
          return getMerkleFrom(hashArray);
-      }
-
-      private static void updateACCTs()
-      {
-         AccountUpdater acctUpdater = new AccountUpdater();
-         acctUpdater.RunUpdate();
       }
    }
 }

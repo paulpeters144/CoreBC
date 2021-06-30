@@ -1,4 +1,5 @@
 ﻿using CoreBC.BlockModels;
+using CoreBC.DataAccess;
 using CoreBC.Utils;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -11,46 +12,47 @@ using System.Text;
 
 namespace CoreBC
 {
-   class PlayScenario
+   public class PlayScenario
    {
       public string Path { get; set; }
-      public void Play()
+      public IDataAccess DB { get; set; }
+      public PlayScenario()
       {
          Path = Program.FilePath;
-         CreateTx();
+         DB = new BlockChainFiles(
+               Helpers.GetBlockchainFilePath(),
+               Helpers.GetMempooFile(),
+               Helpers.GetAcctSetFile()
+            );
       }
 
       public void CreateTx()
       {
-         var senderKey = new DactylKey("paulp");
-         var recKey = new DactylKey("paulp1");
+         var senderKey = new ChainKeys("paulp");
+         var recKey = new ChainKeys("paulp1");
          string recPubKey = recKey.GetPubKeyString();
          Random rand = new Random();
 
          for (int i = 0; i < 5; i++)
          {
-            int num = rand.Next(1000000);
+            int num = rand.Next(10000);
             decimal amount = num * .0001M;
             var tx = senderKey.SendMoneyTo(recPubKey, amount);
             if (tx != null)
-               new BlockchainRecord().SaveToMempool(tx);
+               DB.SaveToMempool(tx);
          }
       }
 
       public void MineMempool()
       {
-         string filePath = Helpers.GetBlockDir() + Helpers.GetNexBlockFileName();
-         var minerKey = new DactylKey("paulp");
+         string filePath = Helpers.GetBlockchainFilePath();
+         var minerKey = new ChainKeys("paulp");
 
-         string mostRecentFile = Directory
-            .GetFiles($"{Program.FilePath}\\Blockchain\\Blocks")
-            .OrderByDescending(a => a).ToList()[0];
-
-         BlockModel previousBlock = getLastestBlockFrom(mostRecentFile);
+         BlockModel previousBlock = getLastestBlockFrom(filePath);
 
          long currentTime = Helpers.GetCurrentUTC();
          Int64 height = previousBlock.Height + 1;
-
+         decimal reward = Helpers.GetMineReward(height);
          CoinbaseModel coinbase = new CoinbaseModel
          {
             TransactionId = Helpers.GetSHAStringFromString(
@@ -58,25 +60,25 @@ namespace CoreBC
                ),
             Output = new Output() 
             { 
-               Amount = Helpers.FormatDactylDigits(300), 
+               Amount = Helpers.FormatDigits(reward), 
                ToAddress = minerKey.GetPubKeyString()
             },
          };
 
          List<TransactionModel> memPool = getMemPool();
 
-         string[] mempoolTransactions = 
+         string[] allTransactions = 
             memPool.Select(x => x.TransactionId).Prepend(coinbase.TransactionId).ToArray();
          
-         string merkleRoot = getMerkleFrom(mempoolTransactions);
+         string merkleRoot = getMerkleFrom(allTransactions);
          var nextBlock = new BlockModel()
          {
             PreviousHash = previousBlock.Hash,
             Confirmations = 0,
-            TransactionCount = memPool.Count,
+            TransactionCount = allTransactions.Length,
             Height = height,
             MerkleRoot = merkleRoot,
-            TXs = mempoolTransactions,
+            TXs = allTransactions,
             Time = new DateTimeOffset(DateTime.UtcNow).ToUnixTimeSeconds(),
             Difficulty = Helpers.GetDifficulty(),
             Coinbase = coinbase
@@ -85,10 +87,9 @@ namespace CoreBC
          Miner miner = new Miner();
          nextBlock = miner.Mine(nextBlock);
          nextBlock.Coinbase.BlockHash = nextBlock.Hash;
-
-         BlockchainRecord blockchainRecord = new BlockchainRecord();
-         blockchainRecord.SaveNewBlock(nextBlock);
-         //blockchainRecord.UpdateFileMetaData(filePath);
+         BlockChecker blockChecker = new BlockChecker();
+         blockChecker.ConfirmPriorBlocks();
+         DB.SaveBlock(nextBlock);
       }
 
       private string getMerkleFrom(string[] mempoolTransactions)
@@ -117,60 +118,33 @@ namespace CoreBC
 
       private List<TransactionModel> getMemPool()
       {
-         List<TransactionModel> result = new List<TransactionModel>();
-         string mempoolPath = $"{Program.FilePath}\\Blockchain\\Mempool\\mempool.json";
-         
+         string mempoolPath = Program.FilePath + "\\Blockchain\\Mempool\\mempool.json";
          if (!File.Exists(mempoolPath))
-            return result;
-         
-         string mempoolJson = File.ReadAllText(mempoolPath);
-         JObject mempoolObj = JObject.Parse(mempoolJson);
-         foreach (var tx in mempoolObj)
-         {
-            TransactionModel txModel = new TransactionModel()
-            {
-               TransactionId = tx.Key,
-               Signature = tx.Value["Signature"].ToString(),
-               Locktime = Convert.ToInt64(tx.Value["Locktime"]),
-               Input = new Input() 
-               {
-                  FromAddress = tx.Value["Input"]["FromAddress"].ToString(),
-                  Amount = tx.Value["Input"]["Amount"].ToString()
-               },
-               Output = new Output() 
-               {
-                  ToAddress = tx.Value["Output"]["ToAddress"].ToString(),
-                  Amount = tx.Value["Output"]["Amount"].ToString()
-               },
-               Fee = tx.Value["Fee"].ToString()
-            };
-            result.Add(txModel);
-         }
+            File.Create(mempoolPath).Dispose();
 
-         return result;
+         string mempoolFile = File.ReadAllText(mempoolPath);
+
+         if (String.IsNullOrEmpty(mempoolFile) ||
+             mempoolFile == "[]")
+         {
+            return new List<TransactionModel>();
+         }
+         else
+         {
+            return JsonConvert.DeserializeObject<TransactionModel[]>(mempoolFile).ToList();
+         }
       }
 
       private BlockModel getLastestBlockFrom(string mostRecentFile)
       {
          string json = File.ReadAllText(mostRecentFile);
-         JObject blockchainObj = JObject.Parse(json);
-         string blockHash = string.Empty;
-         BlockModel resultBlock = new BlockModel();
-         resultBlock.Height = -1;
-         foreach (var block in blockchainObj)
-         {
-            if (block.Key.ToLower() == "heightrange")
-               continue;
-            
-            blockHash = block.Key;
-            int currentBlockHeight = Convert.ToInt32(block.Value["Height"]);
-            if (resultBlock.Height < currentBlockHeight)
-            {
-               resultBlock.Hash = block.Key;
-               resultBlock.Height = currentBlockHeight;
-            }
-         }
-         return resultBlock;
+         BlockModel[] blocks = JsonConvert.DeserializeObject<BlockModel[]>(json);
+         blocks = (from b in blocks
+                   orderby b.Height
+                   descending
+                   select b).ToArray();
+         BlockModel topBlock = blocks[0];
+         return topBlock;
       }
    }
 }

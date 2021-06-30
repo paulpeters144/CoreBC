@@ -69,7 +69,7 @@ namespace CoreBC
          return new String(stringChars);
       }
 
-      public GenesisBlockModel Mine(GenesisBlockModel genesisBlock)
+      public BlockModel MineGBlock(BlockModel genesisBlock)
       {
          string mRoot = genesisBlock.MerkleRoot;
          string difficulty = genesisBlock.Difficulty;
@@ -78,7 +78,6 @@ namespace CoreBC
          for ( ; ; )
          {
             string attempt = $"{mRoot}{time}{difficulty}{nonce}";
-            //byte[] hashBytes = SHA256.Create().ComputeHash(Encoding.ASCII.GetBytes(attempt));
             string hashAttemp = Helpers.GetSHAStringFromString(attempt);
 
             if (hashAttemp.StartsWith(genesisBlock.Difficulty))

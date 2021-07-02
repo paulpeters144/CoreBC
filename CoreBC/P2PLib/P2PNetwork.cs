@@ -35,6 +35,7 @@ namespace CoreBC.P2PLib
 
       public void SendMessage(string msg)
       {
+         msg = $"{ID}<ID>{msg}<EOF>";
          Client.SendMessage(msg);
       }
    }

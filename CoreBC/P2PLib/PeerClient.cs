@@ -1,5 +1,9 @@
-﻿using System;
+﻿using CoreBC.BlockModels;
+using CoreBC.DataAccess;
+using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
@@ -12,12 +16,14 @@ namespace CoreBC.P2PLib
       private int BuffSize { get; set; }
       private int MaxServers { get; set; }
       private string ID { get; set; }
+      private IDataAccess DB;
       public PeerClient(string id, int buffSize, int maxServers)
       {
          ID = id;
          ServerDic = new Dictionary<string, TcpClient>();
          BuffSize = buffSize;
          MaxServers = maxServers;
+         DB = new BlockChainFiles();
       }
 
       public void Connect(string ip, int port)
@@ -35,7 +41,7 @@ namespace CoreBC.P2PLib
             ServerDic.Add(serverName, new TcpClient());
             ServerDic[serverName].Connect(ip, port);
 
-            string preppedMsg = prepMessage("init connection");
+            string preppedMsg = prepMessage("<bootstrap>");
             byte[] outStream = Encoding.ASCII.GetBytes(preppedMsg);
             var serverStream = ServerDic[serverName].GetStream();
             serverStream.Write(outStream, 0, outStream.Length);
@@ -59,8 +65,7 @@ namespace CoreBC.P2PLib
          }
          foreach (var client in ServerDic.Values) // brodcast msg to all connected servers
          {
-            string preppedMsg = prepMessage(message);
-            byte[] outStream = Encoding.ASCII.GetBytes(preppedMsg);
+            byte[] outStream = Encoding.ASCII.GetBytes(message);
             var serverStream = client.GetStream();
             serverStream.Write(outStream, 0, outStream.Length);
             serverStream.Flush();
@@ -69,7 +74,7 @@ namespace CoreBC.P2PLib
 
       private void listenForMessages(string serverName)
       {
-         MessageParser messageParser = new MessageParser();
+         MessageParser message = new MessageParser();
          bool connected = true;
          while (connected)
          {
@@ -78,10 +83,10 @@ namespace CoreBC.P2PLib
                var serverStream = ServerDic[serverName].GetStream();
                byte[] inStream = new byte[BuffSize];
                serverStream.Read(inStream, 0, BuffSize);
-               messageParser.ConsumeBites(inStream);
+               message.ConsumeBites(inStream);
 
-               if (messageParser.EndOfFile)
-                  handleMessage(messageParser.SenderId, messageParser.Message);
+               if (message.EndOfFile)
+                  handleMessage(message);
             }
             catch (Exception ex)
             {
@@ -96,13 +101,70 @@ namespace CoreBC.P2PLib
          }
       }
 
-      private void handleMessage(string serverId, string message)
+      private void handleMessage(MessageParser message)
       {
-         // will need to handle message from server here
-         Console.WriteLine($"{serverId}: {message}");
+         switch (message.FromServer)
+         {
+            case MsgFromServer.ABlockWasMined:
+               break;
+            case MsgFromServer.NewTransaction:
+               break;
+            case MsgFromServer.HeresMyBlockHeight:
+               checkForNewBlockHeight(message);
+               break;
+            case MsgFromServer.HeresSomeConnections:
+               break;
+            case MsgFromServer.HeresHeightRange:
+               addHeightRangeToBlocks(message);
+               break;
+            case MsgFromServer.PretendIsNull:
+               break;
+            default: throw new Exception($"unknown message header from client {message.SenderId}");
+         }
       }
 
       public string prepMessage(string msg) =>
          $"{ID}<ID>{msg}<EOF>";
+
+      #region
+      private void checkForNewBlockHeight(MessageParser message)
+      {
+         try
+         {
+            var blocks = DB.GetAllBlocks();
+            long blockHeightFromServer = Convert.ToInt64(message.Message);
+            long currentBlockHeight = blocks[0].Height;
+            if (currentBlockHeight < blockHeightFromServer)
+            {
+               string range = $"<needheightrange>{currentBlockHeight}:{blockHeightFromServer}";
+               string preppedMsg = prepMessage(range);
+               SendMessage(preppedMsg);
+            }
+         }
+         catch (Exception)
+         {
+
+         }
+      }
+
+      private void addHeightRangeToBlocks(MessageParser message)
+      {
+         try
+         {
+            List<string> currentBlockHashes = DB.GetAllBlocks().Select(b => b.Hash).ToList();
+            BlockModel[] blocksFromMessage = JsonConvert.DeserializeObject<BlockModel[]>(message.Message);
+            foreach (var block in blocksFromMessage)
+            {
+               if (!currentBlockHashes.Contains(block.Hash))
+                  DB.SaveBlock(block);
+            }
+         }
+         catch (Exception)
+         {
+
+            throw;
+         }
+      }
+      #endregion
    }
 }

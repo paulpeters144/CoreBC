@@ -7,8 +7,10 @@ namespace CoreBC.P2PLib
    public class MessageParser
    {
       public bool EndOfFile = false;
-      public string SenderId { get; set; }
+      public string SenderId;
       public string Message = "";
+      public MsgFromServer FromServer = MsgFromServer.PretendIsNull;
+      public MsgFromClient FromClient  = MsgFromClient.PretendIsNull;
       public void ConsumeBites(byte[] consumedBytes)
       {
          string stringedData = Encoding.ASCII.GetString(consumedBytes);
@@ -17,14 +19,83 @@ namespace CoreBC.P2PLib
             SenderId = stringedData.Split("<ID>")[0];
             stringedData = stringedData.Split("<ID>")[1];
             Message = "";
+            Message += stringedData;
+            FromClient = MsgFromClient.PretendIsNull;
+            FromServer = MsgFromServer.PretendIsNull;
             EndOfFile = false;
          }
-         if (stringedData.Contains("<EOF>"))
+         else
          {
-            stringedData = stringedData.Split("<EOF>")[0];
-            EndOfFile = true;
+            Message += stringedData;
          }
-         Message += stringedData;
+       
+         if (Message.Contains("<EOF>"))
+         {
+            Message = Message.Split("<EOF>")[0];
+            EndOfFile = true;
+            
+            parseHeader();
+         }
+      }
+
+      private void parseHeader()
+      {
+         string header = string.Empty;
+         char[] msgArr = Message.ToCharArray();
+
+         if (!Message.Contains('<') && !Message.Contains('>'))
+            return;
+
+         foreach (var c in msgArr)
+         {
+            header += c;
+            if (c == '>')
+               break;
+         }
+
+         Message = Message.Substring(
+               header.Length, 
+               Message.Length - header.Length
+            ).Trim();
+
+         switch (header)
+         {
+            case "<newtransaction>":
+               FromClient = MsgFromClient.NewTransaction; 
+               break;
+            case "<blockmined>":
+               FromClient = MsgFromClient.MinedBlockFound;
+               break;
+            case "<needblockhash>":
+               FromClient = MsgFromClient.NeedBlockHash;
+               break;
+            case "<bootstrap>":
+               FromClient = MsgFromClient.NeedBoostrap;
+               break;
+            case "<needconnections>":
+               FromClient = MsgFromClient.NeedConnections;
+               break;
+            case "<needheightrange>":
+               FromClient = MsgFromClient.NeedHeightRange;
+               break;
+
+            case "<ablockwasmined>":
+               FromServer = MsgFromServer.ABlockWasMined;
+               break;
+            case "<gottransaction>":
+               FromServer = MsgFromServer.NewTransaction;
+               break;
+            case "<myblockheight>":
+               FromServer = MsgFromServer.HeresMyBlockHeight;
+               break;
+            case "<gotconnections>":
+               FromServer = MsgFromServer.HeresSomeConnections;
+               break;
+            case "<heresheightrange>":
+               FromServer = MsgFromServer.HeresHeightRange;
+               break;
+            default: throw new Exception($"{header}could not parse header.");
+         }
       }
    }
 }

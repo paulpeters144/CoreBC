@@ -17,21 +17,29 @@ namespace CoreBC
    {
       public static IConfiguration Configuration { get; set; }
       public static string FilePath { get; set; }
-      public static string UserName = "paulp";
+      public static string UserName;
 
       static void Main(string[] args)
       {
          startup();
-         IDataAccess DB = new BlockChainFiles();
-         GenesisBlock genesisBlock = new GenesisBlock();
-         genesisBlock.Generate();
-         DB.UpdateAccountBalances();
-         for (int i = 0; i < 10; i++)
+         //IDataAccess DB = new BlockChainFiles();
+         //GenesisBlock genesisBlock = new GenesisBlock();
+         //genesisBlock.Generate();
+         //DB.UpdateAccountBalances();
+         //for (int i = 0; i < 10; i++)
+         //{
+         //   PlayScenario playScenario = new PlayScenario();
+         //   playScenario.CreateTx();
+         //   playScenario.MineMempool();
+         //   DB.UpdateAccountBalances();
+         //}
+         CommandListener cmdListener = new CommandListener();
+         cmdListener.ProcessCommand("help");
+         cmdListener.ProcessCommand("sign-in paulp");
+         while (true)
          {
-            PlayScenario playScenario = new PlayScenario();
-            playScenario.CreateTx();
-            playScenario.MineMempool();
-            DB.UpdateAccountBalances();
+            string mainCmd = Console.ReadLine();
+            cmdListener.ProcessCommand(mainCmd);
          }
       }
 

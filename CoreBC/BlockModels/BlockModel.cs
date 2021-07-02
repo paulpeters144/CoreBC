@@ -8,8 +8,8 @@ using System.Text.Json.Serialization;
 namespace CoreBC.BlockModels
 {
    public class BlockModel
-   {// Hash is shawd from 1) PreviousHash 2) merkel 3) timestamp 4) difficulty 5) nonce
-      public string Hash { get; set; } // shawd from 1) merkel 2) timestamp 3) difficulty 4) nonce
+   {
+      public string Hash { get; set; }
       public string PreviousHash { get; set; }
       public Int64 Confirmations { get; set; }
       public Int64 TransactionCount { get; set; }

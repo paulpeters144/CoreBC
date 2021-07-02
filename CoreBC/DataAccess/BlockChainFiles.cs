@@ -126,20 +126,10 @@ namespace CoreBC.DataAccess
          return result;
       }
 
-      public TransactionModel[] GetMempool()
-      {
-         throw new NotImplementedException();
-      }
-
-      public decimal GetWalletBalance(string pubKey)
-      {
-         throw new NotImplementedException();
-      }
-
       public bool SaveBlock(BlockModel block)
       {
          bool result = true;
-         if (block.PreviousHash == null)
+         if (block.PreviousHash == null)//this is for the genesis block
          {
             string json = new BlockChainModel().AddBlockToChain(block);
             File.WriteAllText(BlockchainPath, json);
@@ -191,6 +181,7 @@ namespace CoreBC.DataAccess
 
       public bool UpdateAccountBalances()
       {
+         // need to make sure we are getting the longest chain
          string fileText = File.ReadAllText(BlockchainPath);
          BlockModel[] blocks = JsonConvert.DeserializeObject<BlockModel[]>(fileText);
          var acctDictionary = sumBlockActivity(blocks);
@@ -288,6 +279,7 @@ namespace CoreBC.DataAccess
          for (int i = 1; i < prevBlockchain.Length + 1; i++)
             result[i] = prevBlockchain[i - 1];
 
+         result = result.OrderByDescending(b => b.Height).ToArray();
          return JsonConvert.SerializeObject(result, Formatting.Indented);
       }
 

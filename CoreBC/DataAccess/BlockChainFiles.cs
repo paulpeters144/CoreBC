@@ -145,8 +145,6 @@ namespace CoreBC.DataAccess
 
       public bool SaveToMempool(TransactionModel tx)
       {
-         bool result = true;
-
          try
          {
             if (!File.Exists(MempoolPath))
@@ -161,8 +159,16 @@ namespace CoreBC.DataAccess
                   JsonConvert
                   .DeserializeObject<TransactionModel[]>(oldMempoolFile)
                   .ToList();
-               txList.Add(tx);
-               txs = txList.ToArray();
+               List<string> savedTxHashes = txList.Select(e => e.TransactionId).ToList();
+               if (!savedTxHashes.Contains(tx.TransactionId))
+               {
+                  txList.Add(tx);
+                  txs = txList.ToArray();
+               }
+               else
+               {
+                  return false;
+               }
             }
             else
             {
@@ -173,10 +179,10 @@ namespace CoreBC.DataAccess
          }
          catch (Exception)
          {
-            result = false;
+            return false;
          }
 
-         return result;
+         return true;
       }
 
       public bool UpdateAccountBalances()

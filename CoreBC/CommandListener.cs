@@ -71,21 +71,21 @@ namespace CoreBC
       {
          try
          {
-            int port = Convert.ToInt32(subCmd.Split(' ')[1]);
-            string ip = subCmd.Split(' ')[0];
+            string ip = subCmd;
+            int port = Program.TestNetPort;
             P2PNetwork.ConnectTo(ip, port);
          }
-         catch (Exception)
+         catch (Exception ex)
          {
-            Console.WriteLine("Error processing command");
+            string error = $"{ex.Message}{Environment.NewLine}{ex.StackTrace}";
+            Console.WriteLine("Error connecting: " + error);
          }
       }
 
       private void listenForConnections(string portString)
       {
-         int port = Convert.ToInt32(portString);
+         int port = Convert.ToInt32(5500);
          P2PNetwork.ListenOn(port);
-         Console.WriteLine($"Now listen for connections on port: {portString}");
       }
 
       private void showAllCommands()
@@ -94,7 +94,7 @@ namespace CoreBC
          {
             "'clr' to clear console",
             "'l' to start listtening for connections",
-            "'cto <ipaddress>:<port>' to connect to a another node",
+            "'cto <ipaddress>' to connect to a another node",
             "'sign-in <username>' to connect to your Blockchain Wallet",
             "'balances' to see your currency balance",
             "send-to <wallet-address> amount"

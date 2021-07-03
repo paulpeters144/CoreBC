@@ -18,6 +18,7 @@ namespace CoreBC
       public static IConfiguration Configuration { get; set; }
       public static string FilePath { get; set; }
       public static string UserName;
+      public static int TestNetPort = 5500;
 
       static void Main(string[] args)
       {

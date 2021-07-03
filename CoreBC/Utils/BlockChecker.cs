@@ -30,14 +30,27 @@ namespace CoreBC.Utils
          for (int i = 0; i < fullBlockChain.Length; i++)
          {
             var nextBlock = fullBlockChain[i];
-            if (SaysHeaderIsGood(nextBlock) && 
+            if (HeaderIsGood(nextBlock) && 
                TransactionAreTamperFree(nextBlock))
                nextBlock.Confirmations += 1;
          }
          DB.Save(fullBlockChain);
       }
 
-      public bool SaysHeaderIsGood(BlockModel block)
+      public bool ConfirmEntireBlock(BlockModel block)
+      {
+         if (!HeaderIsGood(block))
+            return false;
+
+         if (!TransactionAreTamperFree(block))
+            return false;
+
+         ConfirmPriorBlocks();
+
+         return true;
+      }
+
+      public bool HeaderIsGood(BlockModel block)
       {
          string prevHash = block.PreviousHash;
          var txArray = block.TXs;

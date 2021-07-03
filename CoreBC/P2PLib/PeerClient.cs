@@ -1,5 +1,6 @@
 ﻿using CoreBC.BlockModels;
 using CoreBC.DataAccess;
+using CoreBC.Utils;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -49,10 +50,42 @@ namespace CoreBC.P2PLib
 
             Thread messageThread = new Thread(() => listenForMessages(serverName));
             messageThread.Start();
+            Thread connectThread = new Thread(() => askForConnections());
+            connectThread.Start();
+            Console.WriteLine("Connected to: " + serverName );
          }
          else
          {
             Console.WriteLine("Already connected to a server");
+         }
+      }
+
+      private void askForConnections()
+      {
+         bool connected = true;
+         int fifteenMinSleep = 900000;
+         while (connected)
+         {
+            try
+            {
+               if (MaxServers > ServerDic.Count)
+               {
+                  string message = prepMessage("<needconnections>");
+                  foreach (var client in ServerDic.Values) // brodcast msg to all connected servers
+                  {
+                     byte[] outStream = Encoding.ASCII.GetBytes(message);
+                     var serverStream = client.GetStream();
+                     serverStream.Write(outStream, 0, outStream.Length);
+                     serverStream.Flush();
+                  }
+               }
+
+               Thread.Sleep(fifteenMinSleep);
+            }
+            catch (Exception ex)
+            {
+               string error = ex.Message;
+            }
          }
       }
 
@@ -67,6 +100,21 @@ namespace CoreBC.P2PLib
          {
             byte[] outStream = Encoding.ASCII.GetBytes(message);
             var serverStream = client.GetStream();
+            serverStream.Write(outStream, 0, outStream.Length);
+            serverStream.Flush();
+         }
+      }
+
+      private void broadcastExcept(string preppedMsg, string senderId)
+      {
+         foreach (var server in ServerDic)
+         {
+            if (server.Key == senderId)
+               continue;
+
+            var serverSocket = server.Value;
+            byte[] outStream = Encoding.ASCII.GetBytes(preppedMsg);
+            var serverStream = serverSocket.GetStream();
             serverStream.Write(outStream, 0, outStream.Length);
             serverStream.Flush();
          }
@@ -106,13 +154,16 @@ namespace CoreBC.P2PLib
          switch (message.FromServer)
          {
             case MsgFromServer.ABlockWasMined:
+               recordBlock(message);
                break;
             case MsgFromServer.NewTransaction:
+               addNewTransaction(message);
                break;
             case MsgFromServer.HeresMyBlockHeight:
                checkForNewBlockHeight(message);
                break;
             case MsgFromServer.HeresSomeConnections:
+               addConnections(message);
                break;
             case MsgFromServer.HeresHeightRange:
                addHeightRangeToBlocks(message);
@@ -121,6 +172,59 @@ namespace CoreBC.P2PLib
                break;
             default: throw new Exception($"unknown message header from client {message.SenderId}");
          }
+      }
+
+      private void addConnections(MessageParser message)
+      {
+
+      }
+
+      private void recordBlock(MessageParser message)
+      {
+         try
+         {
+            var block = JsonConvert.DeserializeObject<BlockModel>(message.Message);
+            List<string> blockChainHashes = DB.GetAllBlocks().Select(e => e.Hash).ToList();
+
+            if (blockChainHashes.Contains(block.Hash))
+               return;
+
+            BlockChecker blockChecker = new BlockChecker();
+            bool blockChecksOut = blockChecker.ConfirmEntireBlock(block);
+
+            if (blockChecksOut)
+            {
+               DB.SaveBlock(block);
+               string preppedMsg = prepMessage($"<blockmined>{message.Message}");
+               string senderId = message.SenderId;
+               broadcastExcept(preppedMsg, senderId);
+            }
+            else
+            {
+               Console.WriteLine($"Block {block.Hash} was not confirmed.");
+            }
+
+         }
+         catch (Exception)
+         { }
+      }
+
+
+      private void addNewTransaction(MessageParser message)
+      {
+         try
+         {
+            var tx = JsonConvert.DeserializeObject<TransactionModel>(message.Message);
+            bool txSaved = DB.SaveToMempool(tx);
+            if (txSaved)
+            {
+               string preppedMsg = prepMessage($"<newtransaction>{message.Message}");
+               string senderId = message.SenderId;
+               broadcastExcept(preppedMsg, senderId);
+            }
+         }
+         catch (Exception)
+         { }
       }
 
       public string prepMessage(string msg) =>

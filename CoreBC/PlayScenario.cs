@@ -84,12 +84,12 @@ namespace CoreBC
             Coinbase = coinbase
          };
 
-         Miner miner = new Miner();
-         nextBlock = miner.Mine(nextBlock);
-         nextBlock.Coinbase.BlockHash = nextBlock.Hash;
-         BlockChecker blockChecker = new BlockChecker();
-         blockChecker.ConfirmPriorBlocks();
-         DB.SaveBlock(nextBlock);
+         //Miner miner = new Miner();
+         //nextBlock = miner.Mine(nextBlock, 10000000);
+         //nextBlock.Coinbase.BlockHash = nextBlock.Hash;
+         //BlockChecker blockChecker = new BlockChecker();
+         //blockChecker.ConfirmPriorBlocks();
+         //DB.SaveMinedBlock(nextBlock);
       }
 
       private string getMerkleFrom(string[] mempoolTransactions)
@@ -118,10 +118,7 @@ namespace CoreBC
 
       private List<TransactionModel> getMemPool()
       {
-         string mempoolPath = Program.FilePath + "\\Blockchain\\Mempool\\mempool.json";
-         if (!File.Exists(mempoolPath))
-            File.Create(mempoolPath).Dispose();
-
+         string mempoolPath = Helpers.GetMempooFile();
          string mempoolFile = File.ReadAllText(mempoolPath);
 
          if (String.IsNullOrEmpty(mempoolFile) ||

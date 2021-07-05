@@ -13,14 +13,14 @@ namespace CoreBC.Utils
 
    class BlockChecker
    {
-      private ChainKeys DactylKey { get; set; }
+      private ChainKeys ChainKeys { get; set; }
       private IDataAccess DB;
       public bool FullChainConfirmed { get; internal set; }
       public string MainFileDestination { get; set; }
 
       public BlockChecker()
       {
-         DactylKey = new ChainKeys(Program.UserName);
+         ChainKeys = new ChainKeys(Program.UserName);
          DB = new BlockChainFiles();
       }
 
@@ -61,13 +61,17 @@ namespace CoreBC.Utils
 
          if (block.PreviousHash != null)
          {
-            string merkleRoot = getMerkleFrom(txArray);
+            string merkleRoot = string.Empty;
+            if (txArray.Length > 1)
+               merkleRoot = getMerkleFrom(txArray);
+            else
+               merkleRoot = Helpers.GetSHAStringFromString(block.Coinbase.TransactionId);
             answer = $"{prevHash}{merkleRoot}{time}{difficulty}{nonce}";
          }
          else
          {
-            string coinbaseTxId = block.Coinbase.TransactionId;
-            string merkleRoot = Helpers.GetSHAStringFromString($"{coinbaseTxId}{coinbaseTxId}");
+
+            string merkleRoot = Helpers.GetSHAStringFromString(block.Coinbase.TransactionId);
             answer = $"{merkleRoot}{time}{difficulty}{nonce}";
          }
          
@@ -99,8 +103,8 @@ namespace CoreBC.Utils
 
          foreach (var tx in block.Transactions)
          {
-            var txIsGood = DactylKey.VerifyTransaction(tx);
-            var txCopy = DactylKey.CreateTransactionId(tx);
+            var txIsGood = ChainKeys.VerifyTransaction(tx);
+            var txCopy = ChainKeys.CreateTransactionId(tx);
             bool txIdIsCorrect = String.Equals(tx.TransactionId, txCopy.TransactionId);
 
             if (!txIsGood || !txIdIsCorrect)

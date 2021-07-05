@@ -1,4 +1,5 @@
 ﻿using CoreBC.BlockModels;
+using CoreBC.DataAccess;
 using CoreBC.P2PLib;
 using Newtonsoft.Json;
 using System;
@@ -11,13 +12,16 @@ namespace CoreBC
 {
    class CommandListener
    {
-      public P2PNetwork P2PNetwork { get; set; }
+      public P2PNetwork P2PNetwork;
+      public Miner Miner;
+      private IDataAccess DB;
       public CommandListener()
       {
          int bufferSize = 2058;
          int maxClientCount = 10;
          int maxConnectCount = 10;
          P2PNetwork = new P2PNetwork(bufferSize, maxClientCount, maxConnectCount);
+         DB = new BlockChainFiles();
       }
       public void ProcessCommand(string mainCmd)
       {
@@ -31,13 +35,38 @@ namespace CoreBC
          switch (mainCmd)
          {
             case "help": showAllCommands(); break;
+            case "mine": mine(); break;
             case "clr": Console.Clear(); break;
             case "l": listenForConnections(subCmd); break;
             case "cto": connectTo(subCmd); break;
             case "sign-in": signinAs(subCmd); break;
             case "send-to": sendCurrencyTo(subCmd); break;
+            case "genesis": getGBlock(); break;
+            case "balance": getBalance(); break;
             default: Console.WriteLine("Not a valid command"); break;
          }
+      }
+
+      private void getBalance()
+      {
+         ChainKeys chainKeys = new ChainKeys(Program.UserName);
+         string pubKey = chainKeys.GetPubKeyString();
+         var bal = DB.GetWalletBalanceFor(pubKey);
+         Console.WriteLine($"{Program.UserName} has {bal}");
+      }
+
+      private void getGBlock()
+      {
+         GenesisBlock genesisBlock = new GenesisBlock(P2PNetwork);
+         genesisBlock.Generate();
+      }
+
+      private void mine()
+      {
+         Miner = new Miner(P2PNetwork);
+         Thread minerThread = new Thread(() => Miner.Mining());
+         Miner.IsMining = true;
+         minerThread.Start();
       }
 
       private void sendCurrencyTo(string subCmd)
@@ -50,6 +79,7 @@ namespace CoreBC
             TransactionModel tx = chainKeys.SendMoneyTo(address, Convert.ToDecimal(amount));
             if (tx != null)
             {
+               DB.SaveToMempool(tx);
                string json = JsonConvert.SerializeObject(tx, Formatting.None);
                string message = $"<newtransaction>{json}";
                P2PNetwork.SendMessage(message);
@@ -71,8 +101,8 @@ namespace CoreBC
       {
          try
          {
-            string ip = subCmd;
-            int port = Program.TestNetPort;
+            string ip = "127.0.0.1";
+            int port = Convert.ToInt32(subCmd);
             P2PNetwork.ConnectTo(ip, port);
          }
          catch (Exception ex)
@@ -84,7 +114,7 @@ namespace CoreBC
 
       private void listenForConnections(string portString)
       {
-         int port = Convert.ToInt32(5500);
+         int port = Convert.ToInt32(portString);
          P2PNetwork.ListenOn(port);
       }
 

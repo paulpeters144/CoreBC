@@ -11,7 +11,7 @@ using System.Threading;
 
 namespace CoreBC.P2PLib
 {
-   class PeerClient
+   public class PeerClient
    {
       private Dictionary<string, TcpClient> ServerDic;
       private int BuffSize { get; set; }
@@ -194,7 +194,7 @@ namespace CoreBC.P2PLib
 
             if (blockChecksOut)
             {
-               DB.SaveBlock(block);
+               DB.SaveRecievedBlock(block);
                string preppedMsg = prepMessage($"<blockmined>{message.Message}");
                string senderId = message.SenderId;
                broadcastExcept(preppedMsg, senderId);
@@ -236,11 +236,21 @@ namespace CoreBC.P2PLib
          try
          {
             var blocks = DB.GetAllBlocks();
-            long blockHeightFromServer = Convert.ToInt64(message.Message);
-            long currentBlockHeight = blocks[0].Height;
-            if (currentBlockHeight < blockHeightFromServer)
+            if (blocks != null)
             {
-               string range = $"<needheightrange>{currentBlockHeight}:{blockHeightFromServer}";
+               long blockHeightFromServer = Convert.ToInt64(message.Message);
+               long currentBlockHeight = blocks[0].Height;
+               if (0 < blockHeightFromServer)
+               {
+                  string range = $"<needheightrange>{currentBlockHeight}:{blockHeightFromServer}";
+                  string preppedMsg = prepMessage(range);
+                  SendMessage(preppedMsg);
+               }
+            }
+            else
+            {
+               long blockHeightFromServer = Convert.ToInt64(message.Message);
+               string range = $"<needheightrange>{0}:{blockHeightFromServer}";
                string preppedMsg = prepMessage(range);
                SendMessage(preppedMsg);
             }
@@ -255,18 +265,23 @@ namespace CoreBC.P2PLib
       {
          try
          {
-            List<string> currentBlockHashes = DB.GetAllBlocks().Select(b => b.Hash).ToList();
-            BlockModel[] blocksFromMessage = JsonConvert.DeserializeObject<BlockModel[]>(message.Message);
-            foreach (var block in blocksFromMessage)
+            var blocks = DB.GetAllBlocks();
+            if (blocks != null)
             {
-               if (!currentBlockHashes.Contains(block.Hash))
-                  DB.SaveBlock(block);
+               List<string> currentBlockHashes = blocks.Select(b => b.Hash).ToList();
+               BlockModel blockFromMessage = JsonConvert.DeserializeObject<BlockModel>(message.Message);
+               if (!currentBlockHashes.Contains(blockFromMessage.Hash))
+                  DB.SaveRecievedBlock(blockFromMessage);
+            }
+            else
+            {
+               BlockModel blockFromMessage = JsonConvert.DeserializeObject<BlockModel>(message.Message);
+               DB.SaveRecievedBlock(blockFromMessage);
             }
          }
-         catch (Exception)
+         catch (Exception ex)
          {
-
-            throw;
+            Helpers.ReadException(ex);
          }
       }
       #endregion

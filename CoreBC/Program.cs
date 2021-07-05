@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
@@ -18,22 +19,17 @@ namespace CoreBC
       public static IConfiguration Configuration { get; set; }
       public static string FilePath { get; set; }
       public static string UserName;
-      public static int TestNetPort = 5500;
 
       static void Main(string[] args)
       {
          startup();
-         //IDataAccess DB = new BlockChainFiles();
-         //GenesisBlock genesisBlock = new GenesisBlock();
-         //genesisBlock.Generate();
-         //DB.UpdateAccountBalances();
-         //for (int i = 0; i < 10; i++)
-         //{
-         //   PlayScenario playScenario = new PlayScenario();
-         //   playScenario.CreateTx();
-         //   playScenario.MineMempool();
-         //   DB.UpdateAccountBalances();
-         //}
+         BlockModel block = new BlockChainFiles().GetAllBlocks()[0];
+         BlockChecker blockChecker = new BlockChecker();
+         blockChecker.ConfirmEntireBlock(block);
+         TransactionModel tx = JsonConvert.DeserializeObject<TransactionModel[]>
+            (File.ReadAllText(Helpers.GetMempooFile()))[0];
+         ChainKeys chainKeys = new ChainKeys("paulp");
+         bool good = chainKeys.VerifyTransaction(tx);
          CommandListener cmdListener = new CommandListener();
          cmdListener.ProcessCommand("help");
          cmdListener.ProcessCommand("sign-in paulp");
@@ -49,10 +45,31 @@ namespace CoreBC
          Configuration = new ConfigurationBuilder()
                          .AddJsonFile("appsettings.json", true, true)
                          .Build();
-         var codeBase = System.Reflection.Assembly.GetExecutingAssembly().Location;
-         var pathList = codeBase.Split("\\").ToList();
-         pathList.RemoveAt(pathList.Count - 1);
-         FilePath = String.Join("\\", pathList.ToArray());
+         CreateMainFiles();
+      }
+      
+      public static void CreateMainFiles()
+      {
+         FilePath = Directory.GetCurrentDirectory() + $"\\BlockchainFiles";
+         string[] arr = FilePath.Split('\\');
+         string node = arr[arr.Length - 1];
+         Console.WriteLine("Node folder: " + node);
+
+         string mainDir = Helpers.GetBlockDir();
+         if (!Directory.Exists(mainDir))
+            Directory.CreateDirectory(mainDir);
+
+         string blockchainPath = Helpers.GetBlockchainFilePath();
+         if (!File.Exists(blockchainPath))
+            File.Create(blockchainPath).Dispose();
+
+         string acctSetPath = Helpers.GetAcctSetFile();
+         if (!File.Exists(acctSetPath))
+            File.Create(acctSetPath).Dispose();
+
+         string mempoolPath = Helpers.GetMempooFile();
+         if (!File.Exists(mempoolPath))
+            File.Create(mempoolPath).Dispose();
       }
    }
 }

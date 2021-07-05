@@ -1,7 +1,9 @@
 ﻿using CoreBC.BlockModels;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -9,6 +11,7 @@ namespace CoreBC.Utils
 {
    public static class Helpers
    {
+      public static bool WeHaveReceivedNewBlock = false;
       public static string FormatDigits(decimal amount)
       {
          decimal rounded = Math.Round(amount, 10, MidpointRounding.ToEven);
@@ -35,10 +38,8 @@ namespace CoreBC.Utils
       public static long GetCurrentUTC() =>
          new DateTimeOffset(DateTime.UtcNow).ToUnixTimeSeconds();
 
-      public static string GetDifficulty()
-      {
-         return "000";
-      }
+      public static string GetDifficulty() =>
+         "00000";
 
       public static string GetDifficulty(BlockModel[] blocks)
       {
@@ -46,7 +47,7 @@ namespace CoreBC.Utils
          int maxBlockTimeSeconds = 600;
          List<BlockModel> blockList = blocks.OrderByDescending(b => b.Time).ToList();
          string lastDifficulty = blockList[0].Difficulty;
-         
+
          if (blocks.Length < maxBlockCount)
             return lastDifficulty;
 
@@ -75,34 +76,23 @@ namespace CoreBC.Utils
          return result;
       }
 
-      public static string GetCoinbaseAmount()
-      {
-         return "300";
-      }
+      public static string GetCoinbaseAmount() =>
+         "300";
 
-      public static decimal GetFeePercent()
-      {
-         return 0.00025M;
-      }
-      public static string GetBlockchainFilePath()
-      {
-         return GetBlockDir() + $"DotNetBlockChain.json";
-      }
+      public static decimal GetFeePercent() =>
+         0.00025M;
 
-      public static string GetAcctSetFile()
-      {
-         return $"{Program.FilePath}\\Blockchain\\ACCTSet\\ACCTSet.json";
-      }
+      public static string GetBlockDir() =>
+      $"{Program.FilePath}\\";
 
-      public static string GetBlockDir()
-      {
-         return $"{Program.FilePath}\\Blockchain\\Blocks\\";
-      }
+      public static string GetBlockchainFilePath() =>
+         GetBlockDir() + $"DotNetBlockChain.json";
 
-      public static string GetMempooFile()
-      {
-         return $"{Program.FilePath}\\Blockchain\\Mempool\\mempool.json";
-      }
+      public static string GetAcctSetFile() =>
+         GetBlockDir() + "ACCTSet.json";
+
+      public static string GetMempooFile() =>
+         GetBlockDir() + "mempool.json";
 
       public static decimal GetMineReward(long height)
       {
@@ -114,6 +104,12 @@ namespace CoreBC.Utils
             height -= halving;
          }
          return baseReward;
+      }
+
+      public static void ReadException(Exception ex)
+      {
+         string error = $"{ex.Message}{Environment.NewLine}{ex.StackTrace}";
+         Console.WriteLine("Error connecting: " + error);
       }
    }
 }

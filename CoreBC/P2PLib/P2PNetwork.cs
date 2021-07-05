@@ -8,7 +8,7 @@ using System.Threading;
 
 namespace CoreBC.P2PLib
 {
-   class P2PNetwork
+   public class P2PNetwork
    {
       public string ID { get; set; }
       public PeerClient Client { get; set; }
@@ -37,6 +37,7 @@ namespace CoreBC.P2PLib
       {
          msg = $"{ID}<ID>{msg}<EOF>";
          Client.SendMessage(msg);
+         Server.BroadcastExcept(msg, ID);
       }
    }
 }

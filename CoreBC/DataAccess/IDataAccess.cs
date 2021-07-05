@@ -10,7 +10,8 @@ namespace CoreBC.DataAccess
       public BlockModel[] GetLastBlocks(int count);
       public BlockModel GetBlockHeight(int height);
       public BlockModel GetBlock(string hash);
-      public bool SaveBlock(BlockModel block);
+      public bool SaveMinedBlock(BlockModel block);
+      public bool SaveRecievedBlock(BlockModel block);
       public bool SaveToMempool(TransactionModel tx);
       public bool UpdateAccountBalances();
       BlockModel[] GetAllBlocks();

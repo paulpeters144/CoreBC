@@ -70,7 +70,7 @@ namespace CoreBC
 
          if (txVerified && hasEnoughDYL)
             return tx;
-         else  return null;
+         else return null;
       }
 
       public bool VerifyTransaction(TransactionModel tx)
@@ -79,7 +79,7 @@ namespace CoreBC
          var document = Encoding.ASCII.GetBytes(message);
          byte[] hashedDocument = SHA256.Create().ComputeHash(document);
          byte[] txSig = Convert.FromBase64String(tx.Signature);
-         bool result = VerifySignature(hashedDocument, txSig);
+         bool result = VerifySignature(hashedDocument, txSig, tx);
          return result;
       }
 
@@ -91,7 +91,7 @@ namespace CoreBC
          sb.Append($"{tx.Output.ToAddress}{tx.Output.Amount}");
          sb.Append(tx.Locktime);
          sb.Append(tx.Signature);
-         
+
          string txFullMessage = sb.ToString();
          byte[] txFullMessageInBytes = Encoding.ASCII.GetBytes(txFullMessage);
          byte[] txIdInBytes = SHA256.Create().ComputeHash(txFullMessageInBytes);
@@ -107,7 +107,7 @@ namespace CoreBC
          sb.Append($"{tx.Input.FromAddress}{tx.Input.Amount}");
          sb.Append($"{tx.Output.ToAddress}{tx.Output.Amount}");
          sb.Append(tx.Locktime);
-         
+
          return sb.ToString();
       }
 
@@ -152,15 +152,28 @@ namespace CoreBC
          }
       }
 
-      private bool VerifySignature(byte[] hashOfDataToSign, byte[] signature)
+      private bool VerifySignature(byte[] hashOfDataToSign, byte[] signature, TransactionModel tx)
       {
-         using (var rsa = new RSACryptoServiceProvider(KeySize))
+         string pubKey = pubKeyFormatter(tx.Input.FromAddress);
+         var rsa = RSAKeys.ImportPublicKey(pubKey);
+         var rsaDeformatter = new RSAPKCS1SignatureDeformatter(rsa);
+         rsaDeformatter.SetHashAlgorithm("SHA256");
+         bool result = rsaDeformatter.VerifySignature(hashOfDataToSign, signature);
+         return result;
+      }
+
+      private string pubKeyFormatter(string fromAddress)
+      {
+         string result = "-----BEGIN PUBLIC KEY-----";
+         char[] charArr = fromAddress.ToCharArray();
+         for (int i = 0; i < charArr.Length; i++)
          {
-            rsa.ImportParameters(PublicKey);
-            var rsaDeformatter = new RSAPKCS1SignatureDeformatter(rsa);
-            rsaDeformatter.SetHashAlgorithm("SHA256");
-            return rsaDeformatter.VerifySignature(hashOfDataToSign, signature);
+            if (i % 64 == 0)
+               result += "\n";
+            result += charArr[i];
          }
+         result += "\n-----END PUBLIC KEY-----";
+         return $"{result}";
       }
 
       private void loadKeySetFrom(string keyPath)

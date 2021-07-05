@@ -9,6 +9,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Threading;
 
 namespace CoreBC.P2PLib
 {
@@ -84,16 +85,33 @@ namespace CoreBC.P2PLib
       {
          while (true)
          {
-            byte[] bytesFrom = new byte[BuffSize];
-            NetworkStream networkStream = clientSocket.GetStream();
-            await networkStream.ReadAsync(bytesFrom, 0, BuffSize);
-            messageParser.ConsumeBites(bytesFrom);
-            if (messageParser.EndOfFile)
-               handleMessage(messageParser, clientSocket);
+            try
+            {
+               byte[] bytesFrom = new byte[BuffSize];
+               NetworkStream networkStream = clientSocket.GetStream();
+               await networkStream.ReadAsync(bytesFrom, 0, BuffSize);
+               messageParser.ConsumeBites(bytesFrom);
+               if (messageParser.EndOfFile)
+                  handleMessage(messageParser, clientSocket);
+            }
+            catch (Exception ex)
+            {
+               string error = ex.Message;
+               if (error.ToLower().Contains("connection was forcibly closed by the remote host"))
+               {
+                  ClientHT.Remove(messageParser.SenderId);
+                  Console.WriteLine(messageParser.SenderId + " disconnected");
+               }
+               else
+               {
+                  string er = $"{ex.Message}{Environment.NewLine}{ex.StackTrace}";
+                  Console.WriteLine(er);
+               }
+            }
          }
       }
 
-      private async void broadcastExcept(string preppedMsg, string clientId)
+      public async void BroadcastExcept(string preppedMsg, string clientId)
       {
          foreach (DictionaryEntry client in ClientHT)
          {
@@ -180,10 +198,10 @@ namespace CoreBC.P2PLib
 
             if (blockChecksOut)
             {
-               DB.SaveBlock(block);
+               DB.SaveRecievedBlock(block);
                string preppedMsg = prepMessage($"<ablockwasmined>{message.Message}");
                string senderId = message.SenderId;
-               broadcastExcept(preppedMsg, senderId);
+               BroadcastExcept(preppedMsg, senderId);
             }
             else
             {
@@ -205,7 +223,7 @@ namespace CoreBC.P2PLib
             {
                string preppedMsg = prepMessage($"<gottransaction>{message.Message}");
                string senderId = message.SenderId;
-               broadcastExcept(preppedMsg, senderId);
+               BroadcastExcept(preppedMsg, senderId);
             }
          }
          catch (Exception ex)
@@ -218,18 +236,28 @@ namespace CoreBC.P2PLib
       {
          // eventually, we need to send the client ip addresses of other servers that could be connected to.
          var allBlocks = DB.GetAllBlocks();
-         string preppedMsg = prepMessage($"<myblockheight>{allBlocks[0].Height}");
-         sendMsgToClient(preppedMsg, clientSocket);
+         if (allBlocks != null)
+         {
+            string preppedMsg = prepMessage($"<myblockheight>{allBlocks[0].Height}");
+            sendMsgToClient(preppedMsg, clientSocket);
+         }
       }
 
       private void sendHeightRange(MessageParser message, TcpClient clientSocket)
       {
          int startingHeight = Convert.ToInt32(message.Message.Split(":")[0]);
          int endingHeight = Convert.ToInt32(message.Message.Split(":")[1]);
-         var allBlocks = DB.GetAllBlocks().Where(b => b.Height >= startingHeight && b.Height <= endingHeight);
-         string json = JsonConvert.SerializeObject(allBlocks, Formatting.None);
-         string preppedMsg = prepMessage($"<heresheightrange>{json}");
-         sendMsgToClient(preppedMsg, clientSocket);
+         var allBlocks = DB.GetAllBlocks()
+            .Where(b => b.Height >= startingHeight && b.Height <= endingHeight)
+            .OrderBy(b => b.Height)
+            .ToArray();
+         for (int i = 0; i < allBlocks.Length; i++)
+         {
+            string json = JsonConvert.SerializeObject(allBlocks[i], Formatting.None);
+            string preppedMsg = prepMessage($"<heresheightrange>{json}");
+            Thread.Sleep(250);
+            sendMsgToClient(preppedMsg, clientSocket);
+         }
       }
       #endregion
 

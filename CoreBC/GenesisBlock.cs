@@ -1,18 +1,19 @@
 ﻿using CoreBC.BlockModels;
 using CoreBC.DataAccess;
+using CoreBC.P2PLib;
 using CoreBC.Utils;
-using System;
 using System.Collections.Generic;
-using System.Security.Cryptography;
-using System.Text;
 
 namespace CoreBC
 {
    class GenesisBlock
    {
       public IDataAccess DB;
-      public GenesisBlock()
+      public P2PNetwork P2PNetwork;
+      public GenesisBlock(P2PNetwork p2pNetwork)
       {
+         P2PNetwork = p2pNetwork;
+
          DB = new BlockChainFiles(
                Helpers.GetBlockchainFilePath(),
                Helpers.GetMempooFile(),
@@ -35,7 +36,7 @@ namespace CoreBC
          string genesisCoinbase = $"{0}_belongs_to_{pubKey}";
          string coinbaseTxId = Helpers.GetSHAStringFromString(genesisCoinbase);
          coinbase.TransactionId = coinbaseTxId;
-         string merkelRoot = Helpers.GetSHAStringFromString($"{coinbaseTxId}{coinbaseTxId}");
+         string merkelRoot = Helpers.GetSHAStringFromString($"{coinbaseTxId}");
 
          BlockModel genesisBlock = new BlockModel
          {
@@ -48,23 +49,21 @@ namespace CoreBC
             Time = Helpers.GetCurrentUTC()
          };
 
-         Miner miner = new Miner();
+         Miner miner = new Miner(P2PNetwork);
          genesisBlock = miner.MineGBlock(genesisBlock);
          string checkAnswer =
             genesisBlock.MerkleRoot +
             genesisBlock.Time +
             genesisBlock.Difficulty +
             genesisBlock.Nonce;
-         byte[] answerBytes = SHA256.Create().ComputeHash(Encoding.ASCII.GetBytes(checkAnswer));
 
-         string officialGenesisBlockHash = Helpers.GetSHAStringFromBytes(answerBytes);
+         string officialGenesisBlockHash = Helpers.GetSHAStringFromString(checkAnswer);
          genesisBlock.Hash = officialGenesisBlockHash;
-
          if (officialGenesisBlockHash.StartsWith(genesisBlock.Difficulty))
          {
             coinbase.BlockHash = officialGenesisBlockHash;
             genesisBlock.Coinbase = coinbase;
-            DB.SaveBlock(genesisBlock);
+            DB.SaveMinedBlock(genesisBlock);
          }
       }
 

@@ -37,10 +37,14 @@ namespace CoreBC.DataAccess
       public BlockModel[] GetAllBlocks()
       {
          string blockchainJson = File.ReadAllText(BlockchainPath);
-         BlockModel[] result = JsonConvert
+         if (!String.IsNullOrEmpty(blockchainJson))
+         {
+            BlockModel[] result = JsonConvert
             .DeserializeObject<BlockModel[]>(blockchainJson)
             .OrderByDescending(b => b.Height).ToArray();
-         return result;
+            return result;
+         }
+         return null;
       }
 
       public BlockModel GetBlock(string hash)
@@ -66,6 +70,9 @@ namespace CoreBC.DataAccess
          string acctSet = File.ReadAllText(AccountSetPath);
          AccountModel[] accounts = JsonConvert.DeserializeObject<AccountModel[]>(acctSet);
 
+         if (accounts == null)
+            return result;
+
          foreach (var account in accounts)
          {
             if (account.Address == publicKey)
@@ -74,9 +81,6 @@ namespace CoreBC.DataAccess
                break;
             }
          }
-
-         if (!File.Exists(MempoolPath))
-            File.Create(MempoolPath).Dispose();
 
          string mempoolFile = File.ReadAllText(MempoolPath);
 
@@ -126,10 +130,10 @@ namespace CoreBC.DataAccess
          return result;
       }
 
-      public bool SaveBlock(BlockModel block)
+      public bool SaveMinedBlock(BlockModel block)
       {
          bool result = true;
-         if (block.PreviousHash == null)//this is for the genesis block
+         if (block.PreviousHash == null) //this is for the genesis block
          {
             string json = new BlockChainModel().AddBlockToChain(block);
             File.WriteAllText(BlockchainPath, json);
@@ -139,7 +143,27 @@ namespace CoreBC.DataAccess
          block = getMinedTransactions(block);
          removeAllMinedTXs(block);
          string blockJson = getNewBlockChain(block, BlockchainPath);
+         Helpers.WeHaveReceivedNewBlock = true;
          File.WriteAllText(BlockchainPath, blockJson);
+         UpdateAccountBalances();
+         return result;
+      }
+
+      public bool SaveRecievedBlock(BlockModel block)
+      {
+         bool result = true;
+         if (block.PreviousHash == null) //this is for the genesis block
+         {
+            string json = new BlockChainModel().AddBlockToChain(block);
+            File.WriteAllText(BlockchainPath, json);
+            return result;
+         }
+
+         removeAllMinedTXs(block);
+         Helpers.WeHaveReceivedNewBlock = true;
+         string blockJson = getNewBlockChain(block, BlockchainPath);
+         File.WriteAllText(BlockchainPath, blockJson);
+         UpdateAccountBalances();
          return result;
       }
 
@@ -147,9 +171,6 @@ namespace CoreBC.DataAccess
       {
          try
          {
-            if (!File.Exists(MempoolPath))
-               File.Create(MempoolPath).Dispose();
-
             string oldMempoolFile = File.ReadAllText(MempoolPath);
             TransactionModel[] txs;
             if (!String.IsNullOrEmpty(oldMempoolFile) &&
@@ -188,11 +209,18 @@ namespace CoreBC.DataAccess
       public bool UpdateAccountBalances()
       {
          // need to make sure we are getting the longest chain
-         string fileText = File.ReadAllText(BlockchainPath);
-         BlockModel[] blocks = JsonConvert.DeserializeObject<BlockModel[]>(fileText);
-         var acctDictionary = sumBlockActivity(blocks);
-         saveToACCTSet(acctDictionary);
-         return true;
+         try
+         {
+            string fileText = File.ReadAllText(BlockchainPath);
+            BlockModel[] blocks = JsonConvert.DeserializeObject<BlockModel[]>(fileText);
+            var acctDictionary = sumBlockActivity(blocks);
+            saveToACCTSet(acctDictionary);
+            return true;
+         }
+         catch (Exception)
+         {
+            return false;
+         }
       }
 
 
@@ -265,28 +293,31 @@ namespace CoreBC.DataAccess
 
          AccountModel[] accountSetArray = acctSet.ToArray();
          string newFile = JsonConvert.SerializeObject(accountSetArray, Formatting.Indented);
-         string dirPath = $"{Program.FilePath}\\Blockchain\\ACCTSet";
-
-         if (!Directory.Exists(dirPath))
-            Directory.CreateDirectory(dirPath);
-         string filePath = dirPath + "\\ACCTSet.json";
+         string filePath = Helpers.GetAcctSetFile();
          File.WriteAllText(filePath, newFile);
       }
 
       private string getNewBlockChain(BlockModel block, string blockchainPath)
       {
-         BlockModel[] prevBlockchain = JsonConvert
-            .DeserializeObject<BlockModel[]>(
-               File.ReadAllText(BlockchainPath)
-            );
-         BlockModel[] result = new BlockModel[prevBlockchain.Length + 1];
-         result[0] = block;
+         string prevJson = File.ReadAllText(BlockchainPath);
+         if (!String.IsNullOrEmpty(prevJson))
+         {
+            BlockModel[] prevBlockchain = JsonConvert
+            .DeserializeObject<BlockModel[]>(prevJson);
+            BlockModel[] result = new BlockModel[prevBlockchain.Length + 1];
+            result[0] = block;
 
-         for (int i = 1; i < prevBlockchain.Length + 1; i++)
-            result[i] = prevBlockchain[i - 1];
+            for (int i = 1; i < prevBlockchain.Length + 1; i++)
+               result[i] = prevBlockchain[i - 1];
 
-         result = result.OrderByDescending(b => b.Height).ToArray();
-         return JsonConvert.SerializeObject(result, Formatting.Indented);
+            result = result.OrderByDescending(b => b.Height).ToArray();
+            return JsonConvert.SerializeObject(result, Formatting.Indented);
+         }
+         else
+         {
+            BlockModel[] result = new BlockModel[] { block };
+            return JsonConvert.SerializeObject(result, Formatting.Indented);
+         }
       }
 
       private void removeAllMinedTXs(BlockModel block)

@@ -53,12 +53,20 @@ namespace CoreBC.P2PLib
                break;
          }
 
-         Message = Message.Substring(
-               header.Length, 
-               Message.Length - header.Length
-            ).Trim();
+         try
+         {
+            Message = Message.Substring(
+                  header.Length,
+                  Message.Length - header.Length
+               ).Trim();
+         }
+         catch (Exception)
+         {
+            Message = string.Empty;
+         }
 
-         switch (header)
+
+         switch (header) // from client switch
          {
             case "<newtransaction>":
                FromClient = MsgFromClient.NewTransaction; 
@@ -78,11 +86,14 @@ namespace CoreBC.P2PLib
             case "<needheightrange>":
                FromClient = MsgFromClient.NeedHeightRange;
                break;
+         }
 
-            case "<ablockwasmined>":
+         switch (header) // from server switch
+         {
+            case "<blockmined>":
                FromServer = MsgFromServer.ABlockWasMined;
                break;
-            case "<gottransaction>":
+            case "<newtransaction>":
                FromServer = MsgFromServer.NewTransaction;
                break;
             case "<myblockheight>":
@@ -94,7 +105,6 @@ namespace CoreBC.P2PLib
             case "<heresheightrange>":
                FromServer = MsgFromServer.HeresHeightRange;
                break;
-            default: throw new Exception($"{header}could not parse header.");
          }
       }
    }

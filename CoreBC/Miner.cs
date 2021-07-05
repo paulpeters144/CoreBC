@@ -1,72 +1,25 @@
 ﻿using CoreBC.BlockModels;
+using CoreBC.DataAccess;
+using CoreBC.P2PLib;
 using CoreBC.Utils;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Security.Cryptography;
-using System.Text;
-using System.Threading;
+using System.IO;
+using System.Linq;
 
 namespace CoreBC
 {
-   class Miner
+   public class Miner
    {
-      public void ProofOfWork()
+      public bool IsMining = false;
+      private IDataAccess DB;
+      private P2PNetwork P2PNetwork;
+      public Miner(P2PNetwork p2pNetwork)
       {
-         int solvedCount = 0;
-         float totalSeconds = 0;
-         while (true)
-         {
-            string challenge = randWord(15);
-            string answer = string.Empty;
-            string attempted = string.Empty;
-            Stopwatch stopwatch = new Stopwatch();
-            stopwatch.Start();
-            int count = 0;
-            while (true)
-            {
-               count++;
-               string attempt = challenge + count;
-               byte[] hashBytes = SHA256.Create().ComputeHash(Encoding.ASCII.GetBytes(attempt));
-               string hashAttemp = getHashString(hashBytes);
-
-               if (hashAttemp.StartsWith("0000"))
-               {
-                  answer = hashAttemp;
-                  attempted = attempt;
-                  break;
-               }
-            }
-
-            stopwatch.Stop();
-            Thread.Sleep(1500);
-            string seconds = "seconds: " + stopwatch.ElapsedMilliseconds * .001f;
-            totalSeconds += stopwatch.ElapsedMilliseconds;
-            solvedCount++;
-            Console.WriteLine($"average seconds: {(totalSeconds / solvedCount) * .001f}\n{count}\n{seconds}\nguess: {attempted}\nanswer: {answer}\n");
-         }
-      }
-
-      public static string getHashString(byte[] hashBytes)
-      {
-         StringBuilder result = new StringBuilder();
-
-         for (int i = 0; i < hashBytes.Length; i++)
-            result.Append(hashBytes[i].ToString("x2"));
-
-         return result.ToString();
-      }
-
-      private static string randWord(int wordLength)
-      {
-         var chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-         var stringChars = new char[wordLength];
-         var random = new Random();
-
-         for (int i = 0; i < stringChars.Length; i++)
-            stringChars[i] = chars[random.Next(chars.Length)];
-
-         return new String(stringChars);
+         DB = new BlockChainFiles();
+         P2PNetwork = p2pNetwork;
       }
 
       public BlockModel MineGBlock(BlockModel genesisBlock)
@@ -87,38 +40,163 @@ namespace CoreBC
             }
             nonce++;
          }
-
+         Console.WriteLine($"Genesis block mined: {genesisBlock.Hash}");
          return genesisBlock;
       }
 
-      public BlockModel Mine(BlockModel block)
+      public void Mining()
       {
-         string result = string.Empty;
+         string filePath = Helpers.GetBlockchainFilePath();
+         var minerKey = new ChainKeys("paulp");
+         Console.WriteLine("mining started...");
+
+         while (IsMining)
+         {
+            BlockModel previousBlock = getLastestBlockFrom(filePath);
+
+            Int64 height = previousBlock.Height + 1;
+            decimal reward = Helpers.GetMineReward(height);
+            CoinbaseModel coinbase = new CoinbaseModel
+            {
+               TransactionId = Helpers.GetSHAStringFromString(
+                     $"{height}_belongs_to_{minerKey.GetPubKeyString()}"
+                  ),
+               Output = new Output()
+               {
+                  Amount = Helpers.FormatDigits(reward),
+                  ToAddress = minerKey.GetPubKeyString()
+               },
+            };
+
+            List<TransactionModel> memPool = getMemPool();
+
+            string[] allTransactions =
+               memPool.Select(x => x.TransactionId).Prepend(coinbase.TransactionId).ToArray();
+
+            string merkleRoot = string.Empty;
+            if (allTransactions.Length > 1)
+               merkleRoot = getMerkleFrom(allTransactions);
+            else
+               merkleRoot = Helpers.GetSHAStringFromString(coinbase.TransactionId);
+
+            var nextBlock = new BlockModel()
+            {
+               PreviousHash = previousBlock.Hash,
+               Confirmations = 0,
+               TransactionCount = allTransactions.Length,
+               Height = height,
+               MerkleRoot = merkleRoot,
+               TXs = allTransactions,
+               Difficulty = Helpers.GetDifficulty(),
+               Coinbase = coinbase
+            };
+
+            nextBlock = Mine(nextBlock, 50000000);
+            if (nextBlock != null)
+               save(nextBlock);
+         }
+      }
+
+      private void save(BlockModel nextBlock)
+      {
+         nextBlock.Coinbase.BlockHash = nextBlock.Hash;
+         BlockChecker blockChecker = new BlockChecker();
+         if (blockChecker.ConfirmEntireBlock(nextBlock))
+         {
+            blockChecker.ConfirmPriorBlocks();
+            bool blockSaved = DB.SaveMinedBlock(nextBlock);
+            if (blockSaved)
+            {
+               string json = JsonConvert.SerializeObject(nextBlock, Formatting.None);
+               P2PNetwork.SendMessage($"<blockmined>{json}");
+               Console.WriteLine($"Blockmined: {nextBlock.Hash}");
+            }
+         }
+      }
+
+      private BlockModel getLastestBlockFrom(string filePath)
+      {
+         string json = File.ReadAllText(filePath);
+         BlockModel[] blocks = JsonConvert.DeserializeObject<BlockModel[]>(json);
+         blocks = (from b in blocks
+                   orderby b.Height
+                   descending
+                   select b).ToArray();
+         BlockModel topBlock = blocks[0];
+         return topBlock;
+      }
+
+      private string getMerkleFrom(string[] mempoolTransactions)
+      {
+         if (mempoolTransactions.Length == 1)
+            return mempoolTransactions[0];
+
+         List<string> hashList = new List<string>();
+         for (int i = 0; i < mempoolTransactions.Length - 1; i += 2)
+         {
+            string hash1 = mempoolTransactions[i];
+            string hash2 = mempoolTransactions[i + 1];
+            string hashedSet = Helpers.GetSHAStringFromString($"{hash1}{hash2}");
+            hashList.Add(hashedSet);
+         }
+         if (mempoolTransactions.Length % 2 == 1)
+         {
+            string lastHashInArray = mempoolTransactions[mempoolTransactions.Length - 1];
+            string lastHash = Helpers.GetSHAStringFromString($"{lastHashInArray}{lastHashInArray}");
+            hashList.Add(lastHash);
+         }
+
+         string[] hashArray = hashList.ToArray();
+         return getMerkleFrom(hashArray);
+      }
+
+      private List<TransactionModel> getMemPool()
+      {
+         string mempoolPath = Helpers.GetMempooFile();
+         string mempoolFile = File.ReadAllText(mempoolPath);
+
+         if (String.IsNullOrEmpty(mempoolFile) ||
+             mempoolFile == "[]")
+         {
+            return new List<TransactionModel>();
+         }
+         else
+         {
+            return JsonConvert.DeserializeObject<TransactionModel[]>(mempoolFile).ToList();
+         }
+      }
+
+      public BlockModel Mine(BlockModel block, int maxLoopCount)
+      {
          string prevHash = block.PreviousHash;
          string mRoot = block.MerkleRoot;
          string difficulty = block.Difficulty;
+         block.Time = Helpers.GetCurrentUTC();
          Int64 nonce = 0;
-         for ( ; ; )
+         for (int i = 0; i < maxLoopCount; i++)
          {
 
+            if (Helpers.WeHaveReceivedNewBlock)
+            {
+               Helpers.WeHaveReceivedNewBlock = false;
+               break;
+            }
+
             string attempt = $"{prevHash}{mRoot}{block.Time}{difficulty}{nonce}";
-            byte[] hashBytes = SHA256.Create().ComputeHash(Encoding.ASCII.GetBytes(attempt));
-            string hashAttemp = getHashString(hashBytes);
+            string hashAttemp = Helpers.GetSHAStringFromString(attempt);
 
             if (hashAttemp.StartsWith(block.Difficulty))
             {
-               result = hashAttemp;
-               break;
+               block.Hash = hashAttemp;
+               block.Nonce = nonce;
+               return block;
             }
             else
             {
                nonce++;
             }
-
          }
-         block.Hash = result;
-         block.Nonce = nonce;
-         return block;
+         return null;
       }
    }
 }

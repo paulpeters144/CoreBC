@@ -23,13 +23,13 @@ namespace CoreBC
       static void Main(string[] args)
       {
          startup();
-         BlockModel block = new BlockChainFiles().GetAllBlocks()[0];
-         BlockChecker blockChecker = new BlockChecker();
-         blockChecker.ConfirmEntireBlock(block);
-         TransactionModel tx = JsonConvert.DeserializeObject<TransactionModel[]>
-            (File.ReadAllText(Helpers.GetMempooFile()))[0];
-         ChainKeys chainKeys = new ChainKeys("paulp");
-         bool good = chainKeys.VerifyTransaction(tx);
+         //BlockModel block = new BlockChainFiles().GetAllBlocks()[0];
+         //BlockChecker blockChecker = new BlockChecker();
+         //blockChecker.ConfirmEntireBlock(block);
+         //TransactionModel tx = JsonConvert.DeserializeObject<TransactionModel[]>
+         //   (File.ReadAllText(Helpers.GetMempooFile()))[0];
+         //ChainKeys chainKeys = new ChainKeys("paulp");
+         //bool good = chainKeys.VerifyTransaction(tx);
          CommandListener cmdListener = new CommandListener();
          cmdListener.ProcessCommand("help");
          cmdListener.ProcessCommand("sign-in paulp");

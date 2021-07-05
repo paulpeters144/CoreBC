@@ -45,8 +45,6 @@ namespace CoreBC.Utils
          if (!TransactionAreTamperFree(block))
             return false;
 
-         ConfirmPriorBlocks();
-
          return true;
       }
 

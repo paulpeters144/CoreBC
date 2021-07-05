@@ -199,7 +199,7 @@ namespace CoreBC.P2PLib
             if (blockChecksOut)
             {
                DB.SaveRecievedBlock(block);
-               string preppedMsg = prepMessage($"<ablockwasmined>{message.Message}");
+               string preppedMsg = prepMessage($"<blockmined>{message.Message}");
                string senderId = message.SenderId;
                BroadcastExcept(preppedMsg, senderId);
             }

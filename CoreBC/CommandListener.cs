@@ -1,6 +1,7 @@
 ﻿using CoreBC.BlockModels;
 using CoreBC.DataAccess;
 using CoreBC.P2PLib;
+using CoreBC.Utils;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -14,6 +15,7 @@ namespace CoreBC
    {
       public P2PNetwork P2PNetwork;
       public Miner Miner;
+      public Thread MinerThread;
       private IDataAccess DB;
       public CommandListener()
       {
@@ -35,7 +37,8 @@ namespace CoreBC
          switch (mainCmd)
          {
             case "help": showAllCommands(); break;
-            case "mine": mine(); break;
+            case "mine-start": mine(true); break;
+            case "mine-stop": mine(false); break;
             case "clr": Console.Clear(); break;
             case "l": listenForConnections(subCmd); break;
             case "cto": connectTo(subCmd); break;
@@ -43,8 +46,22 @@ namespace CoreBC
             case "send-to": sendCurrencyTo(subCmd); break;
             case "genesis": getGBlock(); break;
             case "balance": getBalance(); break;
+            case "address": getAddress(); break;
+            case "set-diff": setDifficulty(subCmd); break;
             default: Console.WriteLine("Not a valid command"); break;
          }
+      }
+
+      private void setDifficulty(string subCmd)
+      {
+         Helpers.MiningDifficulty = subCmd;
+         Console.WriteLine("Diffulty set to " + subCmd);
+      }
+
+      private void getAddress()
+      {
+         string pubKey = new ChainKeys(Program.UserName).GetPubKeyString();
+         Console.WriteLine("Address: " + pubKey);
       }
 
       private void getBalance()
@@ -61,12 +78,21 @@ namespace CoreBC
          genesisBlock.Generate();
       }
 
-      private void mine()
+      private void mine(bool start)
       {
-         Miner = new Miner(P2PNetwork);
-         Thread minerThread = new Thread(() => Miner.Mining());
-         Miner.IsMining = true;
-         minerThread.Start();
+         if (start)
+         {
+            Miner = new Miner(P2PNetwork);
+            MinerThread = new Thread(() => Miner.Mining());
+            Miner.IsMining = true;
+            MinerThread.Start();
+         }
+         else
+         {
+            MinerThread.Suspend();
+            MinerThread = null;
+            Miner = null;
+         }
       }
 
       private void sendCurrencyTo(string subCmd)
@@ -120,7 +146,7 @@ namespace CoreBC
 
       private void showAllCommands()
       {
-         List<string> availableCommands = new List<string> 
+         List<string> availableCommands = new List<string>
          {
             "'clr' to clear console",
             "'l' to start listtening for connections",
@@ -129,7 +155,7 @@ namespace CoreBC
             "'balances' to see your currency balance",
             "send-to <wallet-address> amount"
          };
-       
+
          foreach (var cmd in availableCommands)
             Console.WriteLine(cmd);
       }

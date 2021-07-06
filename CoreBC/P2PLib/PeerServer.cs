@@ -221,7 +221,7 @@ namespace CoreBC.P2PLib
             bool txSaved = DB.SaveToMempool(tx);
             if (txSaved)
             {
-               string preppedMsg = prepMessage($"<gottransaction>{message.Message}");
+               string preppedMsg = prepMessage($"<newtransaction>{message.Message}");
                string senderId = message.SenderId;
                BroadcastExcept(preppedMsg, senderId);
             }

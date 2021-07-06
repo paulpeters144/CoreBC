@@ -8,12 +8,13 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace CoreBC
 {
    public class Miner
    {
-      public bool IsMining = false;
+      public bool IsMining = true;
       private IDataAccess DB;
       private P2PNetwork P2PNetwork;
       public Miner(P2PNetwork p2pNetwork)
@@ -48,7 +49,6 @@ namespace CoreBC
       {
          string filePath = Helpers.GetBlockchainFilePath();
          var minerKey = new ChainKeys("paulp");
-         Console.WriteLine("mining started...");
 
          while (IsMining)
          {
@@ -175,6 +175,8 @@ namespace CoreBC
          Int64 nonce = 0;
          for (int i = 0; i < maxLoopCount; i++)
          {
+            if (!IsMining)
+               break;
 
             if (Helpers.WeHaveReceivedNewBlock)
             {
@@ -189,6 +191,7 @@ namespace CoreBC
             {
                block.Hash = hashAttemp;
                block.Nonce = nonce;
+               IsMining = false;
                return block;
             }
             else

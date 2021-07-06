@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace CoreBC
 {
@@ -20,9 +21,7 @@ namespace CoreBC
       public CommandListener()
       {
          int bufferSize = 2058;
-         int maxClientCount = 10;
-         int maxConnectCount = 10;
-         P2PNetwork = new P2PNetwork(bufferSize, maxClientCount, maxConnectCount);
+         P2PNetwork = new P2PNetwork(bufferSize);
          DB = new BlockChainFiles();
       }
       public void ProcessCommand(string mainCmd)
@@ -37,8 +36,7 @@ namespace CoreBC
          switch (mainCmd)
          {
             case "help": showAllCommands(); break;
-            case "mine-start": mine(true); break;
-            case "mine-stop": mine(false); break;
+            case "mine": mine(); break;
             case "clr": Console.Clear(); break;
             case "l": listenForConnections(subCmd); break;
             case "cto": connectTo(subCmd); break;
@@ -78,20 +76,21 @@ namespace CoreBC
          genesisBlock.Generate();
       }
 
-      private void mine(bool start)
+      private void mine()
       {
-         if (start)
+         if (Miner == null)
          {
+            Console.WriteLine("Mining started...");
             Miner = new Miner(P2PNetwork);
-            MinerThread = new Thread(() => Miner.Mining());
-            Miner.IsMining = true;
+            MinerThread = new Thread(Miner.Mining);
             MinerThread.Start();
          }
          else
          {
-            MinerThread.Suspend();
-            MinerThread = null;
+            Console.WriteLine("Mining stopped...");
+            Miner.IsMining = false;
             Miner = null;
+            MinerThread = null;
          }
       }
 

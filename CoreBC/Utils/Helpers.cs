@@ -12,7 +12,7 @@ namespace CoreBC.Utils
    public static class Helpers
    {
       public static bool WeHaveReceivedNewBlock = false;
-      public static string MiningDifficulty = "000000";
+      public static string MiningDifficulty = "000";
       public static string FormatDigits(decimal amount)
       {
          decimal rounded = Math.Round(amount, 10, MidpointRounding.ToEven);

@@ -4,24 +4,13 @@ using System.Text;
 
 namespace CoreBC.P2PLib
 {
-   public enum MsgFromClient
+   public static class MessageHeader
    {
-      NewTransaction, // if tx is new, send tx to all clients except the one that send msg
-      MinedBlockFound, // if block is new, broadcast to clients except the one that sent the msg
-      NeedBlockHash, // if you have has, send client entire block
-      NeedBoostrap, // send client back all ipaddress of clients connected to. Send client all blocks that are missing
-      NeedConnections, // send client back all ipaddress of clients connected to.
-      NeedHeightRange, // after recieving a range of block heights, send client all data for each block in range.
-      PretendIsNull,
-   }
-
-   public enum MsgFromServer
-   {
-      ABlockWasMined, // if block is new, broadcast to clients except the one that sent the msg
-      NewTransaction, // if tx is new, send tx to all clients except the one that send msg
-      HeresMyBlockHeight, // if block height is higher than yours, ask for range of block heights
-      HeresSomeConnections, // if you are not connected to clients, connect to clients
-      HeresHeightRange,
-      PretendIsNull,
+      public static readonly string NewTransaction = "<newtransaction>";
+      public static readonly string BlockMined = "<blockmined>";
+      public static readonly string NeedBoostrap = "<bootstrap>";
+      public static readonly string NeedHeightRange = "<needheightrange>";
+      public static readonly string HeresMyBlockHeight = "<myblockheight>";
+      public static readonly string HeresHeightRange = "<heresheightrange>";
    }
 }

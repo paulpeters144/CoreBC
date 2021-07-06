@@ -15,12 +15,12 @@ namespace CoreBC.P2PLib
       public PeerServer Server { get; set; }
 
       public int BuffSize { get; set; }
-      public P2PNetwork(int buffSize, int maxClientCount, int maxConnectCount)
+      public P2PNetwork(int buffSize)
       {
          ID = Guid.NewGuid().ToString("N").ToUpper();
          BuffSize = buffSize;
-         Client = new PeerClient(ID, BuffSize, maxConnectCount);
-         Server = new PeerServer(ID, BuffSize, maxClientCount);
+         Client = new PeerClient(ID, BuffSize);
+         Server = new PeerServer(ID, BuffSize);
       }
 
       public void ListenOn(int port)

@@ -23,13 +23,6 @@ namespace CoreBC
       static void Main(string[] args)
       {
          startup();
-         //BlockModel block = new BlockChainFiles().GetAllBlocks()[0];
-         //BlockChecker blockChecker = new BlockChecker();
-         //blockChecker.ConfirmEntireBlock(block);
-         //TransactionModel tx = JsonConvert.DeserializeObject<TransactionModel[]>
-         //   (File.ReadAllText(Helpers.GetMempooFile()))[0];
-         //ChainKeys chainKeys = new ChainKeys("paulp");
-         //bool good = chainKeys.VerifyTransaction(tx);
          CommandListener cmdListener = new CommandListener();
          cmdListener.ProcessCommand("help");
          cmdListener.ProcessCommand("sign-in paulp");
@@ -50,7 +43,9 @@ namespace CoreBC
       
       public static void CreateMainFiles()
       {
-         FilePath = Directory.GetCurrentDirectory() + $"\\BlockchainFiles";
+         Console.WriteLine("write folder suffix");
+         string s = Console.ReadLine();
+         FilePath = Directory.GetCurrentDirectory() + $"\\BlockchainFiles{s}";
          string[] arr = FilePath.Split('\\');
          string node = arr[arr.Length - 1];
          Console.WriteLine("Node folder: " + node);

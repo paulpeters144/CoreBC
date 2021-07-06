@@ -15,15 +15,13 @@ namespace CoreBC.P2PLib
    {
       private Dictionary<string, TcpClient> ServerDic;
       private int BuffSize { get; set; }
-      private int MaxServers { get; set; }
       private string ID { get; set; }
       private IDataAccess DB;
-      public PeerClient(string id, int buffSize, int maxServers)
+      public PeerClient(string id, int buffSize)
       {
          ID = id;
          ServerDic = new Dictionary<string, TcpClient>();
          BuffSize = buffSize;
-         MaxServers = maxServers;
          DB = new BlockChainFiles();
       }
 
@@ -31,18 +29,12 @@ namespace CoreBC.P2PLib
       {
          string serverName = $"{ip}:{port}";
 
-         if (ServerDic.Count > MaxServers)
-         {
-            Console.WriteLine("Servers connected to is maxed at " + MaxServers);
-            return;
-         }
-
          if (!ServerDic.ContainsKey(serverName))
          {
             ServerDic.Add(serverName, new TcpClient());
             ServerDic[serverName].Connect(ip, port);
 
-            string preppedMsg = prepMessage("<bootstrap>");
+            string preppedMsg = prepMessage(MessageHeader.NeedBoostrap);
             byte[] outStream = Encoding.ASCII.GetBytes(preppedMsg);
             var serverStream = ServerDic[serverName].GetStream();
             serverStream.Write(outStream, 0, outStream.Length);
@@ -50,42 +42,11 @@ namespace CoreBC.P2PLib
 
             Thread messageThread = new Thread(() => listenForMessages(serverName));
             messageThread.Start();
-            Thread connectThread = new Thread(() => askForConnections());
-            connectThread.Start();
             Console.WriteLine("Connected to: " + serverName );
          }
          else
          {
             Console.WriteLine("Already connected to a server");
-         }
-      }
-
-      private void askForConnections()
-      {
-         bool connected = true;
-         int fifteenMinSleep = 900000;
-         while (connected)
-         {
-            try
-            {
-               if (MaxServers > ServerDic.Count)
-               {
-                  string message = prepMessage("<needconnections>");
-                  foreach (var client in ServerDic.Values) // brodcast msg to all connected servers
-                  {
-                     byte[] outStream = Encoding.ASCII.GetBytes(message);
-                     var serverStream = client.GetStream();
-                     serverStream.Write(outStream, 0, outStream.Length);
-                     serverStream.Flush();
-                  }
-               }
-
-               Thread.Sleep(fifteenMinSleep);
-            }
-            catch (Exception ex)
-            {
-               string error = ex.Message;
-            }
          }
       }
 
@@ -151,32 +112,22 @@ namespace CoreBC.P2PLib
 
       private void handleMessage(MessageParser message)
       {
-         switch (message.FromServer)
+         if (message.Header == MessageHeader.BlockMined)
          {
-            case MsgFromServer.ABlockWasMined:
-               recordBlock(message);
-               break;
-            case MsgFromServer.NewTransaction:
-               addNewTransaction(message);
-               break;
-            case MsgFromServer.HeresMyBlockHeight:
-               checkForNewBlockHeight(message);
-               break;
-            case MsgFromServer.HeresSomeConnections:
-               addConnections(message);
-               break;
-            case MsgFromServer.HeresHeightRange:
-               addHeightRangeToBlocks(message);
-               break;
-            case MsgFromServer.PretendIsNull:
-               break;
-            default: throw new Exception($"unknown message header from client {message.SenderId}");
+            recordBlock(message);
          }
-      }
-
-      private void addConnections(MessageParser message)
-      {
-
+         else if (message.Header == MessageHeader.NewTransaction)
+         {
+            addNewTransaction(message);
+         }
+         else if (message.Header == MessageHeader.HeresMyBlockHeight)
+         {
+            checkForNewBlockHeight(message);
+         }
+         else if (message.Header == MessageHeader.HeresHeightRange)
+         {
+            addHeightRangeToBlocks(message);
+         }
       }
 
       private void recordBlock(MessageParser message)
@@ -195,7 +146,7 @@ namespace CoreBC.P2PLib
             if (blockChecksOut)
             {
                DB.SaveRecievedBlock(block);
-               string preppedMsg = prepMessage($"<blockmined>{message.Message}");
+               string preppedMsg = prepMessage($"{MessageHeader.BlockMined}{message.Message}");
                string senderId = message.SenderId;
                broadcastExcept(preppedMsg, senderId);
             }
@@ -218,7 +169,8 @@ namespace CoreBC.P2PLib
             bool txSaved = DB.SaveToMempool(tx);
             if (txSaved)
             {
-               string preppedMsg = prepMessage($"<newtransaction>{message.Message}");
+               string preppedMsg = prepMessage($"{MessageHeader.NewTransaction}" +
+                  $"{message.Message}");
                string senderId = message.SenderId;
                broadcastExcept(preppedMsg, senderId);
             }
@@ -242,7 +194,8 @@ namespace CoreBC.P2PLib
                long currentBlockHeight = blocks[0].Height;
                if (0 < blockHeightFromServer)
                {
-                  string range = $"<needheightrange>{currentBlockHeight}:{blockHeightFromServer}";
+                  string range = $"{MessageHeader.NeedHeightRange}" +
+                     $"{currentBlockHeight}:{blockHeightFromServer}";
                   string preppedMsg = prepMessage(range);
                   SendMessage(preppedMsg);
                }
@@ -250,7 +203,8 @@ namespace CoreBC.P2PLib
             else
             {
                long blockHeightFromServer = Convert.ToInt64(message.Message);
-               string range = $"<needheightrange>{0}:{blockHeightFromServer}";
+               string range = $"{MessageHeader.NeedHeightRange}" +
+                  $"{0}:{blockHeightFromServer}";
                string preppedMsg = prepMessage(range);
                SendMessage(preppedMsg);
             }

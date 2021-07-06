@@ -19,15 +19,13 @@ namespace CoreBC.P2PLib
       public bool Running { get; set; }
       public Hashtable ClientHT { get; set; }
       public int BuffSize { get; set; }
-      private int MaxClientCount { get; set; }
       private IDataAccess DB { get; set; }
       public string ID { get; set; }
-      public PeerServer(string id, int buffSize, int maxClientCount)
+      public PeerServer(string id, int buffSize)
       {
          ID = id;
          ClientHT = new Hashtable();
          BuffSize = buffSize;
-         MaxClientCount = maxClientCount;
          DB = new BlockChainFiles();
       }
       public async void ListenOn(int port)
@@ -61,6 +59,8 @@ namespace CoreBC.P2PLib
                      ClientHT.Add(clientId, clientSocket);
 
                   handleMessage(messageParser, clientSocket);
+                  string prepMsg = prepMessage(MessageHeader.NeedBoostrap);
+                  sendMsgToClient(prepMsg, clientSocket);
                   handleClient(messageParser, clientSocket);
                }
             }
@@ -128,26 +128,21 @@ namespace CoreBC.P2PLib
 
       private void handleMessage(MessageParser message, TcpClient clientSocket)
       {
-         switch (message.FromClient)
+         if (message.Header == MessageHeader.NewTransaction)
          {
-            case MsgFromClient.NewTransaction:
-               addNewTransaction(message);
-               break;
-            case MsgFromClient.MinedBlockFound:
-               recordBlock(message);
-               break;
-            case MsgFromClient.NeedBlockHash:
-               break;
-            case MsgFromClient.NeedBoostrap:
-               bootstrap(clientSocket);
-               break;
-            case MsgFromClient.NeedConnections:
-               sendConnections(message, clientSocket);
-               break;
-            case MsgFromClient.NeedHeightRange:
-               sendHeightRange(message, clientSocket);
-               break;
-            default: throw new Exception($"unknown message header from client {message.SenderId}");
+            addNewTransaction(message);
+         }
+         else if (message.Header == MessageHeader.BlockMined)
+         {
+            recordBlock(message);
+         }
+         else if (message.Header == MessageHeader.NeedBoostrap)
+         {
+            bootstrap(clientSocket);
+         }
+         else if (message.Header == MessageHeader.NeedHeightRange)
+         {
+            sendHeightRange(message, clientSocket);
          }
       }
 
@@ -164,24 +159,6 @@ namespace CoreBC.P2PLib
 
       //Response to client requests
       #region
-      private void sendConnections(MessageParser message, TcpClient senderSocket)
-      {
-         string senderId = message.SenderId;
-         string msg = string.Empty;
-         foreach (DictionaryEntry item in ClientHT)
-         {
-            if (item.Key.ToString() == senderId)
-               continue;
-
-            TcpClient clientSocket = (TcpClient)item.Value;
-            msg += $"{clientSocket.Client.RemoteEndPoint},";
-         }
-         if (!String.IsNullOrEmpty(msg))
-         {
-            string preppedMsg = prepMessage($"<gotconnections>{msg}");
-            sendMsgToClient(preppedMsg, senderSocket);
-         }
-      }
 
       private void recordBlock(MessageParser message)
       {
@@ -199,7 +176,7 @@ namespace CoreBC.P2PLib
             if (blockChecksOut)
             {
                DB.SaveRecievedBlock(block);
-               string preppedMsg = prepMessage($"<blockmined>{message.Message}");
+               string preppedMsg = prepMessage($"{MessageHeader.BlockMined}{message.Message}");
                string senderId = message.SenderId;
                BroadcastExcept(preppedMsg, senderId);
             }
@@ -221,7 +198,7 @@ namespace CoreBC.P2PLib
             bool txSaved = DB.SaveToMempool(tx);
             if (txSaved)
             {
-               string preppedMsg = prepMessage($"<newtransaction>{message.Message}");
+               string preppedMsg = prepMessage($"{MessageHeader.NewTransaction}{message.Message}");
                string senderId = message.SenderId;
                BroadcastExcept(preppedMsg, senderId);
             }
@@ -238,7 +215,7 @@ namespace CoreBC.P2PLib
          var allBlocks = DB.GetAllBlocks();
          if (allBlocks != null)
          {
-            string preppedMsg = prepMessage($"<myblockheight>{allBlocks[0].Height}");
+            string preppedMsg = prepMessage($"{MessageHeader.HeresMyBlockHeight}{allBlocks[0].Height}");
             sendMsgToClient(preppedMsg, clientSocket);
          }
       }
@@ -254,7 +231,7 @@ namespace CoreBC.P2PLib
          for (int i = 0; i < allBlocks.Length; i++)
          {
             string json = JsonConvert.SerializeObject(allBlocks[i], Formatting.None);
-            string preppedMsg = prepMessage($"<heresheightrange>{json}");
+            string preppedMsg = prepMessage($"{MessageHeader.HeresHeightRange}{json}");
             Thread.Sleep(250);
             sendMsgToClient(preppedMsg, clientSocket);
          }

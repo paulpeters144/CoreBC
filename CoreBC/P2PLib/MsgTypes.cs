@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace CoreBC.P2PLib
+﻿namespace CoreBC.P2PLib
 {
     public static class MessageHeader
     {

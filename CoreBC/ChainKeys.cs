@@ -2,19 +2,14 @@
 using CoreBC.CryptoApi;
 using CoreBC.DataAccess;
 using CoreBC.Utils;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using System;
 using System.IO;
-using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
-using System.Text.Json.Serialization;
-using System.Xml;
 
 namespace CoreBC
 {
-   internal class ChainKeys
+    internal class ChainKeys
    {
       public int KeySize = 512;
       public RSAParameters PublicKey;

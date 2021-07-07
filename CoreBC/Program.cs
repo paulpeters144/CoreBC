@@ -1,20 +1,11 @@
 ﻿using System;
 using System.IO;
-using System.Linq;
-using System.Reflection;
-using System.Security.Cryptography;
-using System.Text;
-using System.Threading;
-using CoreBC.BlockModels;
-using CoreBC.DataAccess;
 using CoreBC.Utils;
 using Microsoft.Extensions.Configuration;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 
 namespace CoreBC
 {
-   class Program
+    class Program
    {
       public static IConfiguration Configuration { get; set; }
       public static string FilePath { get; set; }

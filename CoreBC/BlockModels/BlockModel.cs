@@ -1,13 +1,8 @@
-﻿using Newtonsoft.Json;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Text.Json.Serialization;
+﻿using System;
 
 namespace CoreBC.BlockModels
 {
-   public class BlockModel
+    public class BlockModel
    {
       public string Hash { get; set; }
       public string PreviousHash { get; set; }
@@ -21,17 +16,6 @@ namespace CoreBC.BlockModels
       public string Difficulty { get; set; }
       public CoinbaseModel Coinbase { get; set; }
       public TransactionModel[] Transactions { get; set; }
-   }
-
-   public class BlockChainModel 
-   {
-      BlockModel[] Blocks { get; set; }
-      public string AddBlockToChain(BlockModel block)
-      {
-         BlockModel[] blockArray = new BlockModel[] { block };
-         string result = JsonConvert.SerializeObject(blockArray, Formatting.Indented);
-         return result;
-      }
    }
 
    public class AccountModel

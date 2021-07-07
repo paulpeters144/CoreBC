@@ -1,22 +1,19 @@
 ﻿using CoreBC.BlockModels;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 
 namespace CoreBC.Utils
 {
-   public static class Helpers
+    public static class Helpers
    {
       public static bool WeHaveReceivedNewBlock = false;
       public static string MiningDifficulty = "00000";
       public static string FormatDigits(decimal amount)
       {
-         decimal rounded = Math.Round(amount, 10, MidpointRounding.ToEven);
-         return String.Format("{0:0.0000000000}", rounded);
+         return String.Format("{0:0.0000000000}", amount);
       }
 
       public static string GetSHAStringFromBytes(byte[] txIdInBytes)

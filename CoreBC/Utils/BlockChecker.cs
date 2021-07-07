@@ -101,11 +101,11 @@ namespace CoreBC.Utils
 
          foreach (var tx in block.Transactions)
          {
-            var txIsGood = ChainKeys.VerifyTransaction(tx);
+            var txVerified = ChainKeys.VerifyTransaction(tx);
             var txCopy = ChainKeys.CreateTransactionId(tx);
-            bool txIdIsCorrect = String.Equals(tx.TransactionId, txCopy.TransactionId);
+            bool txIdIsMatchest = String.Equals(tx.TransactionId, txCopy.TransactionId);
 
-            if (!txIsGood || !txIdIsCorrect)
+            if (!txVerified || !txIdIsMatchest)
                return false;
          }
 

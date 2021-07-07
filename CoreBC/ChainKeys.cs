@@ -66,7 +66,7 @@ namespace CoreBC
          bool txVerified = VerifyTransaction(tx);
          decimal totalTradeAmount = (Convert.ToDecimal(input.Amount) + Convert.ToDecimal(tx.Fee));
          string pubKey = GetPubKeyString();
-         bool hasEnoughDYL = DB.GetWalletBalanceFor(pubKey) > totalTradeAmount;
+         bool hasEnoughDYL = DB.GetWalletBalanceFor(pubKey) >= totalTradeAmount;
 
          if (txVerified && hasEnoughDYL)
             return tx;

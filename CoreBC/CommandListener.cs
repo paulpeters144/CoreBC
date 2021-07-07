@@ -106,8 +106,10 @@ namespace CoreBC
                 {
                     DB.SaveToMempool(tx);
                     string json = JsonConvert.SerializeObject(tx, Formatting.None);
-                    string message = $"{MessageHeader.NewTransaction}{json}";
-                    P2PNetwork.SendMessage(message);
+                    string message = P2PHelpers.PrepMessage(
+                            P2PNetwork.ID, MessageHeader.NewTransaction, json
+                        );
+                    P2PNetwork.BroadCast(message);
                 }
             }
             catch (Exception)

@@ -13,5 +13,7 @@ namespace CoreBC.P2PLib
         public static readonly string HeresMyBlockHeight = "<myblockheight>";
         public static readonly string HeresHeightRange = "<heresheightrange>";
         public static readonly string MyHastList = "<myhashlist>";
+        public static readonly string NeedHash = "<needhash>";
+        public static readonly string HeresBlockHash = "<heresblockhash>";
     }
 }

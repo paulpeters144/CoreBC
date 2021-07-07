@@ -47,21 +47,21 @@ namespace CoreBC.DataAccess
             return null;
         }
 
-        public BlockModel GetBlock(string hash)
+        public BlockModel GetBlockByHash(string hash)
         {
-            BlockModel result = null;
             string blockchainJson = File.ReadAllText(BlockchainPath);
+            
+            if (String.IsNullOrEmpty(blockchainJson))
+                return null;
+            
             BlockModel[] blocks = JsonConvert
                .DeserializeObject<BlockModel[]>(blockchainJson);
-            for (int i = 0; i < blocks.Length; i++)
-            {
-                if (String.Equals(hash, blocks[i].Hash))
-                {
-                    result = blocks[i];
-                    break;
-                }
-            }
-            return result;
+            var result = blocks.Where(b => b.Hash == hash);
+         
+            if (result.Count() == 0)
+                return null;
+            else
+                return result.ToArray()[0];
         }
 
         public decimal GetWalletBalanceFor(string publicKey)
@@ -171,24 +171,32 @@ namespace CoreBC.DataAccess
             return block;
         }
 
-        public List<string> GetBlockHashList() =>
-            GetAllBlocks().Select(b => b.Hash).ToList();
+        public List<string> GetBlockHashList() 
+        {
+            List<string> result = null;
+            var allBlocks= GetAllBlocks();
+            if (allBlocks != null)
+            {
+                result = allBlocks.Select(b => b.Hash).ToList();
+            }
+            return result;
+        }
 
         public bool SaveRecievedBlock(BlockModel block)
         {
             bool result = true;
-            if (block.PreviousHash == null) //this is for the genesis block
+            try
             {
-                string json = new BlockChainModel().AddBlockToChain(block);
-                File.WriteAllText(BlockchainPath, json);
-                return result;
+                removeAllMinedTXs(block);
+                Helpers.WeHaveReceivedNewBlock = true;
+                string blockJson = getNewBlockChain(block, BlockchainPath);
+                File.WriteAllText(BlockchainPath, blockJson);
+                UpdateAccountBalances();
             }
-
-            removeAllMinedTXs(block);
-            Helpers.WeHaveReceivedNewBlock = true;
-            string blockJson = getNewBlockChain(block, BlockchainPath);
-            File.WriteAllText(BlockchainPath, blockJson);
-            UpdateAccountBalances();
+            catch (Exception ex)
+            {
+                Helpers.ReadException(ex);
+            }
             return result;
         }
 
@@ -332,14 +340,14 @@ namespace CoreBC.DataAccess
             {
                 BlockModel[] prevBlockchain = JsonConvert
                 .DeserializeObject<BlockModel[]>(prevJson);
-                BlockModel[] result = new BlockModel[prevBlockchain.Length + 1];
-                result[0] = block;
+                List<BlockModel> result = new List<BlockModel>();
+                result.Add(block);
 
-                for (int i = 1; i < prevBlockchain.Length + 1; i++)
-                    result[i] = prevBlockchain[i - 1];
+                foreach (var prevBlock in prevBlockchain)
+                    result.Add(prevBlock);
 
-                result = result.OrderByDescending(b => b.Height).ToArray();
-                return JsonConvert.SerializeObject(result, Formatting.Indented);
+                result = result.OrderByDescending(b => b.Height).ToList();
+                return JsonConvert.SerializeObject(result.ToArray(), Formatting.Indented);
             }
             else
             {
@@ -351,6 +359,10 @@ namespace CoreBC.DataAccess
         private void removeAllMinedTXs(BlockModel block)
         {
             string mempoolJson = File.ReadAllText(MempoolPath);
+            
+            if (block.Transactions == null)
+                return;
+            
             List<TransactionModel> mempoolList;
 
             if (String.IsNullOrEmpty(mempoolJson) ||

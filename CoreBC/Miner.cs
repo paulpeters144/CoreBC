@@ -21,36 +21,13 @@ namespace CoreBC
             P2PNetwork = p2pNetwork;
         }
 
-        public BlockModel MineGBlock(BlockModel genesisBlock)
-        {
-            string mRoot = genesisBlock.MerkleRoot;
-            string difficulty = genesisBlock.Difficulty;
-            string time = genesisBlock.Time.ToString();
-            Int64 nonce = 0;
-            for (; ; )
-            {
-                string attempt = $"{mRoot}{time}{difficulty}{nonce}";
-                string hashAttemp = Helpers.GetSHAStringFromString(attempt);
-
-                if (hashAttemp.StartsWith(genesisBlock.Difficulty))
-                {
-                    genesisBlock.Nonce = nonce;
-                    break;
-                }
-                nonce++;
-            }
-            Console.WriteLine($"Genesis block mined: {genesisBlock.Hash}");
-            return genesisBlock;
-        }
-
         public void Mining()
         {
-            string filePath = Helpers.GetBlockchainFilePath();
-            var minerKey = new ChainKeys("paulp");
+            var minerKey = new ChainKeys(Program.UserName);
 
             while (IsMining)
             {
-                BlockModel previousBlock = getLastestBlockFrom(filePath);
+                BlockModel previousBlock = DB.GetAllBlocks()[0];
 
                 Int64 height = previousBlock.Height + 1;
                 decimal reward = Helpers.GetMineReward(height);
@@ -66,7 +43,7 @@ namespace CoreBC
                     },
                 };
 
-                List<TransactionModel> memPool = getMemPool();
+                List<TransactionModel> memPool = DB.GetMempool();
 
                 string[] allTransactions =
                    memPool.Select(x => x.TransactionId).Prepend(coinbase.TransactionId).ToArray();
@@ -76,6 +53,10 @@ namespace CoreBC
                     merkleRoot = getMerkleFrom(allTransactions);
                 else
                     merkleRoot = Helpers.GetSHAStringFromString(coinbase.TransactionId);
+
+                decimal feeReward = 0;
+                if (memPool.Count > 0)
+                    feeReward = memPool.Select(t => Convert.ToDecimal(t.Fee)).Sum();
 
                 var nextBlock = new BlockModel()
                 {
@@ -88,6 +69,7 @@ namespace CoreBC
                     Difficulty = Helpers.GetDifficulty(),
                     Coinbase = coinbase
                 };
+                nextBlock.Coinbase.FeeReward = Helpers.FormatDigits(feeReward);
 
                 nextBlock = Mine(nextBlock, 50000000);
                 if (nextBlock != null)
@@ -113,18 +95,6 @@ namespace CoreBC
             }
         }
 
-        private BlockModel getLastestBlockFrom(string filePath)
-        {
-            string json = File.ReadAllText(filePath);
-            BlockModel[] blocks = JsonConvert.DeserializeObject<BlockModel[]>(json);
-            blocks = (from b in blocks
-                      orderby b.Height
-                      descending
-                      select b).ToArray();
-            BlockModel topBlock = blocks[0];
-            return topBlock;
-        }
-
         private string getMerkleFrom(string[] mempoolTransactions)
         {
             if (mempoolTransactions.Length == 1)
@@ -147,22 +117,6 @@ namespace CoreBC
 
             string[] hashArray = hashList.ToArray();
             return getMerkleFrom(hashArray);
-        }
-
-        private List<TransactionModel> getMemPool()
-        {
-            string mempoolPath = Helpers.GetMempooFile();
-            string mempoolFile = File.ReadAllText(mempoolPath);
-
-            if (String.IsNullOrEmpty(mempoolFile) ||
-                mempoolFile == "[]")
-            {
-                return new List<TransactionModel>();
-            }
-            else
-            {
-                return JsonConvert.DeserializeObject<TransactionModel[]>(mempoolFile).ToList();
-            }
         }
 
         public BlockModel Mine(BlockModel block, int maxLoopCount)

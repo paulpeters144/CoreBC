@@ -2,6 +2,7 @@
 using CoreBC.DataAccess;
 using CoreBC.P2PLib;
 using CoreBC.Utils;
+using System;
 using System.Collections.Generic;
 
 namespace CoreBC
@@ -30,8 +31,9 @@ namespace CoreBC
             {
                ToAddress = pubKey,
                Amount = Helpers.FormatDigits(Helpers.GetMineReward(0))
-            }
-         };
+            },
+            FeeReward = Helpers.FormatDigits(0)
+        };
 
          string genesisCoinbase = $"{0}_belongs_to_{pubKey}";
          string coinbaseTxId = Helpers.GetSHAStringFromString(genesisCoinbase);
@@ -49,8 +51,7 @@ namespace CoreBC
             Time = Helpers.GetCurrentUTC()
          };
 
-         Miner miner = new Miner(P2PNetwork);
-         genesisBlock = miner.MineGBlock(genesisBlock);
+         genesisBlock = mine(genesisBlock);
          string checkAnswer =
             genesisBlock.MerkleRoot +
             genesisBlock.Time +
@@ -67,28 +68,50 @@ namespace CoreBC
          }
       }
 
-      private string getMerkleFrom(string[] mempoolTransactions)
-      {
-         if (mempoolTransactions.Length == 1)
+        private BlockModel mine(BlockModel genesisBlock)
+        {
+            string mRoot = genesisBlock.MerkleRoot;
+            string difficulty = genesisBlock.Difficulty;
+            string time = genesisBlock.Time.ToString();
+            Int64 nonce = 0;
+            for (; ; )
+            {
+                string attempt = $"{mRoot}{time}{difficulty}{nonce}";
+                string hashAttemp = Helpers.GetSHAStringFromString(attempt);
+
+                if (hashAttemp.StartsWith(genesisBlock.Difficulty))
+                {
+                    genesisBlock.Nonce = nonce;
+                    break;
+                }
+                nonce++;
+            }
+            Console.WriteLine($"Genesis block mined: {genesisBlock.Hash}");
+            return genesisBlock;
+        }
+
+        private string getMerkleFrom(string[] mempoolTransactions)
+        {
+            if (mempoolTransactions.Length == 1)
             return mempoolTransactions[0];
 
-         List<string> hashList = new List<string>();
-         for (int i = 0; i < mempoolTransactions.Length - 1; i += 2)
-         {
-            string hash1 = mempoolTransactions[i];
-            string hash2 = mempoolTransactions[i + 1];
-            string hashedSet = Helpers.GetSHAStringFromString($"{hash1}{hash2}");
-            hashList.Add(hashedSet);
-         }
-         if (mempoolTransactions.Length % 2 == 1)
-         {
-            string lastHashInArray = mempoolTransactions[mempoolTransactions.Length - 1];
-            string lastHash = Helpers.GetSHAStringFromString($"{lastHashInArray}{lastHashInArray}");
-            hashList.Add(lastHash);
-         }
+            List<string> hashList = new List<string>();
+            for (int i = 0; i < mempoolTransactions.Length - 1; i += 2)
+            {
+                string hash1 = mempoolTransactions[i];
+                string hash2 = mempoolTransactions[i + 1];
+                string hashedSet = Helpers.GetSHAStringFromString($"{hash1}{hash2}");
+                hashList.Add(hashedSet);
+            }
+            if (mempoolTransactions.Length % 2 == 1)
+            {
+                string lastHashInArray = mempoolTransactions[mempoolTransactions.Length - 1];
+                string lastHash = Helpers.GetSHAStringFromString($"{lastHashInArray}{lastHashInArray}");
+                hashList.Add(lastHash);
+            }
 
-         string[] hashArray = hashList.ToArray();
-         return getMerkleFrom(hashArray);
-      }
+            string[] hashArray = hashList.ToArray();
+            return getMerkleFrom(hashArray);
+        }
    }
 }

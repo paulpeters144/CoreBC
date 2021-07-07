@@ -13,7 +13,8 @@ namespace CoreBC.Utils
       public static string MiningDifficulty = "00000";
       public static string FormatDigits(decimal amount)
       {
-         return String.Format("{0:0.0000000000}", amount);
+         decimal rounded = Math.Round(amount, 14, MidpointRounding.ToEven);
+         return String.Format("{0:0.0000000000}", rounded);
       }
 
       public static string GetSHAStringFromBytes(byte[] txIdInBytes)

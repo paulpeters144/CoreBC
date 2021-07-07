@@ -37,11 +37,12 @@ namespace CoreBC
                 case "mine": mine(); break;
                 case "clr": Console.Clear(); break;
                 case "l": listenForConnections(subCmd); break;
-                case "cto": connectTo(subCmd); break;
+                case "c": connectTo(subCmd); break;
                 case "sign-in": signinAs(subCmd); break;
                 case "send-to": sendCurrencyTo(subCmd); break;
                 case "genesis": getGBlock(); break;
                 case "balance": getBalance(); break;
+                case "update-bal": DB.UpdateAccountBalances(); break;
                 case "address": getAddress(); break;
                 case "set-diff": setDifficulty(subCmd); break;
                 default: Console.WriteLine("Not a valid command"); break;
@@ -146,14 +147,14 @@ namespace CoreBC
         private void showAllCommands()
         {
             List<string> availableCommands = new List<string>
-         {
-            "'clr' to clear console",
-            "'l' to start listtening for connections",
-            "'cto <ipaddress>' to connect to a another node",
-            "'sign-in <username>' to connect to your Blockchain Wallet",
-            "'balances' to see your currency balance",
-            "send-to <wallet-address> amount"
-         };
+             {
+                "'clr' to clear console",
+                "'l' to start listtening for connections",
+                "'c <ipaddress>' to connect to a another node",
+                "'sign-in <username>' to connect to your Blockchain Wallet",
+                "'balances' to see your currency balance",
+                "send-to <wallet-address> amount"
+             };
 
             foreach (var cmd in availableCommands)
                 Console.WriteLine(cmd);

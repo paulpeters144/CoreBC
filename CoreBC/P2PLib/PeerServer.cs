@@ -12,6 +12,7 @@ namespace CoreBC.P2PLib
         public int BuffSize { get; set; }
         public string ID { get; set; }
         private MessageHandler MessageHandler;
+        private Thread ListeningThread;
         public PeerServer(string id, MessageHandler messageHandler, int buffSize)
         {
             ID = id;
@@ -22,10 +23,16 @@ namespace CoreBC.P2PLib
         {
             if (Running)
             {
-                Console.WriteLine("Already connected on.");
+                Console.WriteLine("Already listening.");
                 return;
             }
 
+            ListeningThread = new Thread(() => runListenerOn(port));
+            ListeningThread.Start();
+        }
+
+        private void runListenerOn(int port)
+        {
             Listener = new TcpListener(IPAddress.Any, port);
             Listener.Start();
             Console.WriteLine("Listening on port: " + port);

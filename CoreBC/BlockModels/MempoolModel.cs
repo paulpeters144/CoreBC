@@ -1,10 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace CoreBC.BlockModels
+﻿namespace CoreBC.BlockModels
 {
-   class MempoolModel
+    class MempoolModel
    {
       public TransactionModel[] Transactions { get; set; }
    }

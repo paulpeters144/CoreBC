@@ -27,6 +27,11 @@ namespace CoreBC.DataAccess
             AccountSetPath = accountSetPath;
         }
 
+        public void someFuction()
+        {
+            
+        }
+
         public void Save(BlockModel[] fullBlockChain)
         {
             string json = JsonConvert.SerializeObject(fullBlockChain);
@@ -44,6 +49,22 @@ namespace CoreBC.DataAccess
                 return result;
             }
             return null;
+        }
+
+        public List<TransactionModel> GetMempool()
+        {
+            string mempoolPath = Helpers.GetMempooFile();
+            string mempoolFile = File.ReadAllText(mempoolPath);
+
+            if (String.IsNullOrEmpty(mempoolFile) ||
+                mempoolFile == "[]")
+            {
+                return new List<TransactionModel>();
+            }
+            else
+            {
+                return JsonConvert.DeserializeObject<TransactionModel[]>(mempoolFile).ToList();
+            }
         }
 
         public BlockModel GetBlockByHash(string hash)
@@ -136,38 +157,13 @@ namespace CoreBC.DataAccess
         public bool SaveMinedBlock(BlockModel block)
         {
             bool result = true;
-            if (block.PreviousHash == null) //this is for the genesis block
-            {
-                string json = new BlockChainModel().AddBlockToChain(block);
-                File.WriteAllText(BlockchainPath, json);
-                return result;
-            }
-
             block = getMinedTransactions(block);
-            block = getFeeReward(block);
             removeAllMinedTXs(block);
             string blockJson = getNewBlockChain(block, BlockchainPath);
             Helpers.WeHaveReceivedNewBlock = true;
             File.WriteAllText(BlockchainPath, blockJson);
             UpdateAccountBalances();
             return result;
-        }
-
-        private BlockModel getFeeReward(BlockModel block)
-        {
-            block.Coinbase.FeeReward = string.Empty;
-            decimal totalFee = 0;
-            foreach (var tx in block.Transactions)
-            {
-                try
-                {
-                    totalFee += Convert.ToDecimal(block.Coinbase.FeeReward);
-                }
-                catch (Exception)
-                { }
-            }
-            block.Coinbase.FeeReward = Helpers.FormatDigits(totalFee);
-            return block;
         }
 
         public List<string> GetBlockHashList() 
@@ -240,7 +236,6 @@ namespace CoreBC.DataAccess
 
         public bool UpdateAccountBalances()
         {
-            // need to make sure we are getting the longest chain
             try
             {
                 string fileText = File.ReadAllText(BlockchainPath);
@@ -255,61 +250,83 @@ namespace CoreBC.DataAccess
             }
         }
 
-
-        //-=-=-=-=-=-=-=-=-=-Private Methods-=-=-=-=-=-=-=-=-=-=-=-
-
         private Dictionary<string, string> sumBlockActivity(BlockModel[] blocks)
         {
-            blocks = (from b in blocks
-                      orderby b.Height
-                      ascending
-                      select b).ToArray();
+            List<BlockModel> blockList = (from b in blocks
+                                          orderby b.Height
+                                          descending
+                                          select b).ToList();
+
+            Dictionary<string, BlockModel> blockDic = new Dictionary<string, BlockModel>();
+            foreach (var b in blocks)
+            {
+                if (!blockDic.ContainsKey(b.Hash))
+                    blockDic.Add(b.Hash, b);
+            }
+
+            BlockModel currentBlock = blockList[0];
+            Dictionary<string, decimal> accountSet = new Dictionary<string, decimal>();
+            while (true)
+            {
+                accountSet = addCoinbase(accountSet, currentBlock.Coinbase);
+                accountSet = addTranactions(accountSet, currentBlock.Transactions);
+
+                if (currentBlock.PreviousHash == null)
+                    break;
+                else currentBlock = blockDic[currentBlock.PreviousHash];
+            }
 
             Dictionary<string, string> result = new Dictionary<string, string>();
-            for (int i = 0; i < blocks.Length; i++)
+            foreach (var acct in accountSet)
             {
-                decimal coinbaseAmount = Convert.ToDecimal(blocks[i].Coinbase.Output.Amount);
-                decimal feeReward = Convert.ToDecimal(blocks[i].Coinbase.FeeReward);
-                decimal totalReward = coinbaseAmount + feeReward;
-                string coinbaseAddress = blocks[i].Coinbase.Output.ToAddress;
-                if (result.ContainsKey(coinbaseAddress))
-                {
-                    decimal currentBalance = Convert.ToDecimal(result[coinbaseAddress]);
-                    string newBalance = Helpers.FormatDigits(currentBalance + totalReward);
-                    result[coinbaseAddress] = newBalance;
-                }
-                else
-                {
-                    string newBalance = Helpers.FormatDigits(totalReward);
-                    result.Add(coinbaseAddress, newBalance);
-                }
-
-                if (blocks[i].Transactions == null)
-                    continue;
-
-                for (int x = 0; x < blocks[i].Transactions.Length; x++)
-                {
-                    TransactionModel tx = blocks[i].Transactions[x];
-                    string inputAddress = tx.Input.FromAddress;
-                    decimal inputAmount = Convert.ToDecimal(tx.Input.Amount);
-                    decimal feeAmount = Convert.ToDecimal(tx.Fee);
-                    result[inputAddress] = Helpers.FormatDigits(
-                          Convert.ToDecimal(result[inputAddress]) - (inputAmount + feeAmount)
-                       );
-                    string outputAddress = tx.Output.ToAddress;
-                    decimal outputAmount = Convert.ToDecimal(tx.Output.Amount);
-                    if (result.ContainsKey(outputAddress))
-                    {
-                        result[outputAddress] = Helpers.FormatDigits(
-                              Convert.ToDecimal(result[outputAddress]) + outputAmount
-                           );
-                    }
-                    else
-                    {
-                        result.Add(outputAddress, Helpers.FormatDigits(outputAmount));
-                    }
-                }
+                string amount = Helpers.FormatDigits(acct.Value);
+                string address = acct.Key;
+                result.Add(address, amount);
             }
+            return result;
+        }
+
+        private Dictionary<string, decimal> addCoinbase(Dictionary<string, decimal> result, CoinbaseModel coinbase)
+        {
+            string address = coinbase.Output.ToAddress;
+            decimal coinbaseReward = Convert.ToDecimal(coinbase.Output.Amount);
+            decimal feeReward = Convert.ToDecimal(coinbase.FeeReward);
+            decimal totalReward = coinbaseReward + feeReward;
+            
+            if (result.ContainsKey(address))
+                result[address] += totalReward;
+            else
+                result.Add(address, totalReward);
+            
+            return result;
+        }
+
+        private Dictionary<string, decimal> addTranactions(
+                Dictionary<string, decimal> result, 
+                TransactionModel[] transactions
+            )
+        {
+            
+            foreach (var tx in transactions)
+            {
+                string inputAddress = tx.Input.FromAddress;
+                decimal inputAmount = Convert.ToDecimal(tx.Input.Amount);
+                decimal fee = Convert.ToDecimal(tx.Fee);
+                decimal totalInputDeduct = inputAmount + fee;
+                if (result.ContainsKey(inputAddress))
+                    result[inputAddress] -= totalInputDeduct;
+                else
+                    result.Add(inputAddress, totalInputDeduct * -1);
+
+
+                string outputAddress = tx.Output.ToAddress;
+                decimal outputAmount = Convert.ToDecimal(tx.Output.Amount);
+                if (result.ContainsKey(outputAddress))
+                    result[outputAddress] += outputAmount;
+                else
+                    result.Add(outputAddress, outputAmount);
+            }
+
             return result;
         }
 

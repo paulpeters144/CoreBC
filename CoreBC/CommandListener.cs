@@ -17,12 +17,12 @@ namespace CoreBC
       public P2PNetwork P2PNetwork;
       public Miner Miner;
       public Thread MinerThread;
-      private IDataAccess DB;
+      private DBAccess DB;
       public CommandListener()
       {
          int bufferSize = 2058;
          P2PNetwork = new P2PNetwork(bufferSize);
-         DB = new BlockChainFiles();
+         DB = new DBAccess();
       }
       public void ProcessCommand(string mainCmd)
       {

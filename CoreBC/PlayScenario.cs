@@ -15,15 +15,11 @@ namespace CoreBC
    public class PlayScenario
    {
       public string Path { get; set; }
-      public IDataAccess DB { get; set; }
+      public DBAccess DB { get; set; }
       public PlayScenario()
       {
          Path = Program.FilePath;
-         DB = new BlockChainFiles(
-               Helpers.GetBlockchainFilePath(),
-               Helpers.GetMempooFile(),
-               Helpers.GetAcctSetFile()
-            );
+         DB = new DBAccess();
       }
 
       public void CreateTx()

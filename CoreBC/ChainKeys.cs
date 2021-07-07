@@ -20,12 +20,12 @@ namespace CoreBC
       public RSAParameters PublicKey;
       public string KeyName { get; set; }
       private RSAParameters PrivateKey;
-      private IDataAccess DB;
+      private DBAccess DB;
       public ChainKeys(string keyName)
       {
          KeyName = keyName;
          findKey();
-         DB = new BlockChainFiles();
+         DB = new DBAccess();
       }
       public TransactionModel SignTransaction(TransactionModel tx)
       {

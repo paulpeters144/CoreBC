@@ -14,14 +14,14 @@ namespace CoreBC.Utils
    class BlockChecker
    {
       private ChainKeys ChainKeys { get; set; }
-      private IDataAccess DB;
+      private DBAccess DB;
       public bool FullChainConfirmed { get; internal set; }
       public string MainFileDestination { get; set; }
 
       public BlockChecker()
       {
          ChainKeys = new ChainKeys(Program.UserName);
-         DB = new BlockChainFiles();
+         DB = new DBAccess();
       }
 
       public void ConfirmPriorBlocks()

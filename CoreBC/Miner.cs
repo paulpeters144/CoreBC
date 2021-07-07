@@ -15,11 +15,11 @@ namespace CoreBC
    public class Miner
    {
       public bool IsMining = true;
-      private IDataAccess DB;
+      private DBAccess DB;
       private P2PNetwork P2PNetwork;
       public Miner(P2PNetwork p2pNetwork)
       {
-         DB = new BlockChainFiles();
+         DB = new DBAccess();
          P2PNetwork = p2pNetwork;
       }
 

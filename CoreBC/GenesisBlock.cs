@@ -8,13 +8,13 @@ namespace CoreBC
 {
    class GenesisBlock
    {
-      public IDataAccess DB;
+      public DBAccess DB;
       public P2PNetwork P2PNetwork;
       public GenesisBlock(P2PNetwork p2pNetwork)
       {
          P2PNetwork = p2pNetwork;
 
-         DB = new BlockChainFiles(
+         DB = new DBAccess(
                Helpers.GetBlockchainFilePath(),
                Helpers.GetMempooFile(),
                Helpers.GetAcctSetFile()

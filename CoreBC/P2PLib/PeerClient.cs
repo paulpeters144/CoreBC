@@ -16,13 +16,13 @@ namespace CoreBC.P2PLib
       private Dictionary<string, TcpClient> ServerDic;
       private int BuffSize { get; set; }
       private string ID { get; set; }
-      private IDataAccess DB;
+      private DBAccess DB;
       public PeerClient(string id, int buffSize)
       {
          ID = id;
          ServerDic = new Dictionary<string, TcpClient>();
          BuffSize = buffSize;
-         DB = new BlockChainFiles();
+         DB = new DBAccess();
       }
 
       public void Connect(string ip, int port)

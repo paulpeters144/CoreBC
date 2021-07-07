@@ -9,19 +9,19 @@ using System.Text;
 
 namespace CoreBC.DataAccess
 {
-   class BlockChainFiles : IDataAccess
+   public class DBAccess
    {
       public string BlockchainPath { get; set; }
       public string MempoolPath { get; set; }
       public string AccountSetPath { get; set; }
 
-      public BlockChainFiles()
+      public DBAccess()
       {
          BlockchainPath = Helpers.GetBlockchainFilePath();
          MempoolPath = Helpers.GetMempooFile();
          AccountSetPath = Helpers.GetAcctSetFile();
       }
-      public BlockChainFiles(string blockchainPath, string mempoolPath, string accountSetPath)
+      public DBAccess(string blockchainPath, string mempoolPath, string accountSetPath)
       {
          BlockchainPath = blockchainPath;
          MempoolPath = mempoolPath;

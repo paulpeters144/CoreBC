@@ -19,14 +19,14 @@ namespace CoreBC.P2PLib
       public bool Running { get; set; }
       public Hashtable ClientHT { get; set; }
       public int BuffSize { get; set; }
-      private IDataAccess DB { get; set; }
+      private DBAccess DB { get; set; }
       public string ID { get; set; }
       public PeerServer(string id, int buffSize)
       {
          ID = id;
          ClientHT = new Hashtable();
          BuffSize = buffSize;
-         DB = new BlockChainFiles();
+         DB = new DBAccess();
       }
       public async void ListenOn(int port)
       {

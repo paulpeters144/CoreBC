@@ -26,12 +26,6 @@ namespace CoreBC.DataAccess
             MempoolPath = mempoolPath;
             AccountSetPath = accountSetPath;
         }
-
-        public void someFuction()
-        {
-            
-        }
-
         public void Save(BlockModel[] fullBlockChain)
         {
             string json = JsonConvert.SerializeObject(fullBlockChain);

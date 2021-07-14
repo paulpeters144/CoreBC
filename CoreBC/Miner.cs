@@ -58,6 +58,7 @@ namespace CoreBC
                 if (memPool.Count > 0)
                     feeReward = memPool.Select(t => Convert.ToDecimal(t.Fee)).Sum();
 
+                var allBlocks = DB.GetAllBlocks();
                 var nextBlock = new BlockModel()
                 {
                     PreviousHash = previousBlock.Hash,
@@ -66,7 +67,7 @@ namespace CoreBC
                     Height = height,
                     MerkleRoot = merkleRoot,
                     TXs = allTransactions,
-                    Difficulty = Helpers.GetDifficulty(),
+                    Difficulty = Helpers.GetDifficulty(allBlocks),
                     Coinbase = coinbase
                 };
                 nextBlock.Coinbase.FeeReward = Helpers.FormatDigits(feeReward);

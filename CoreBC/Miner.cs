@@ -23,7 +23,7 @@ namespace CoreBC
 
         public void Mining()
         {
-            var minerKey = new ChainKeys(Program.UserName);
+            var minerKey = new Wallet(Program.UserName);
 
             while (IsMining)
             {

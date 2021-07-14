@@ -6,9 +6,9 @@ using System;
 using System.IO;
 using System.Security.Cryptography;
 
-namespace CoreBC.CryptoApi
+namespace CoreBC.Utils
 {
-   static class RSAKeys
+   public static class RSAKeys
    {
       public static RSACryptoServiceProvider ImportPrivateKey(string pem)
       {

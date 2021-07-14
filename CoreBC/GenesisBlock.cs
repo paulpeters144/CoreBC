@@ -23,7 +23,7 @@ namespace CoreBC
       }
       public void Generate()
       {
-         ChainKeys dactylKey = new ChainKeys("paulp");
+         Wallet dactylKey = new Wallet(Program.UserName);
          string pubKey = dactylKey.GetPubKeyString();
          CoinbaseModel coinbase = new CoinbaseModel
          {

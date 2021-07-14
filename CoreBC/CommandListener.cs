@@ -57,13 +57,13 @@ namespace CoreBC
 
         private void getAddress()
         {
-            string pubKey = new ChainKeys(Program.UserName).GetPubKeyString();
+            string pubKey = new Wallet(Program.UserName).GetPubKeyString();
             Console.WriteLine("Address: " + pubKey);
         }
 
         private void getBalance()
         {
-            ChainKeys chainKeys = new ChainKeys(Program.UserName);
+            Wallet chainKeys = new Wallet(Program.UserName);
             string pubKey = chainKeys.GetPubKeyString();
             var bal = DB.GetWalletBalanceFor(pubKey);
             Console.WriteLine($"{Program.UserName} has {bal}");
@@ -99,7 +99,7 @@ namespace CoreBC
             {
                 string address = subCmd.Split(' ')[0];
                 string amount = subCmd.Split(' ')[1];
-                ChainKeys chainKeys = new ChainKeys(Program.UserName);
+                Wallet chainKeys = new Wallet(Program.UserName);
                 TransactionModel tx = chainKeys.SendMoneyTo(address, Convert.ToDecimal(amount));
                 if (tx != null)
                 {
@@ -148,12 +148,18 @@ namespace CoreBC
         {
             List<string> availableCommands = new List<string>
              {
+                "'help' to show all available commands",
+                "'mine' to mine next block",
                 "'clr' to clear console",
                 "'l' to start listtening for connections",
                 "'c <ipaddress>' to connect to a another node",
                 "'sign-in <username>' to connect to your Blockchain Wallet",
-                "'balances' to see your currency balance",
-                "send-to <wallet-address> amount"
+                "'balance' to see your currency balance",
+                "'send-to <wallet-address> <amount>' to send currency to an address",
+                "'genesis' to mine the genesis block",
+                "'update-bal' to update current balances on from the blockchain",
+                "'address' to see your address",
+                "'set-diff' to set the difficulty on mining the next block"
              };
 
             foreach (var cmd in availableCommands)

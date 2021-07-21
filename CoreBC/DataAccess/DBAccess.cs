@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 
 namespace CoreBC.DataAccess
 {
@@ -34,14 +35,30 @@ namespace CoreBC.DataAccess
 
         public BlockModel[] GetAllBlocks()
         {
-            string blockchainJson = File.ReadAllText(BlockchainPath);
-            if (!String.IsNullOrEmpty(blockchainJson))
+            int tries = 5;
+            int counter = 0;
+            while (counter < tries)
             {
-                BlockModel[] result = JsonConvert
-                .DeserializeObject<BlockModel[]>(blockchainJson)
-                .OrderByDescending(b => b.Height).ToArray();
-                return result;
+                try
+                {
+                    string blockchainJson = File.ReadAllText(BlockchainPath);
+                    if (!String.IsNullOrEmpty(blockchainJson))
+                    {
+                        BlockModel[] result = JsonConvert
+                        .DeserializeObject<BlockModel[]>(blockchainJson)
+                        .OrderByDescending(b => b.Height).ToArray();
+                        return result;
+                    }
+                    break;
+                }
+                catch (Exception)
+                {
+                    counter++;
+                    Thread.Sleep(200);
+                }
             }
+
+
             return null;
         }
 
@@ -64,14 +81,14 @@ namespace CoreBC.DataAccess
         public BlockModel GetBlockByHash(string hash)
         {
             string blockchainJson = File.ReadAllText(BlockchainPath);
-            
+
             if (String.IsNullOrEmpty(blockchainJson))
                 return null;
-            
+
             BlockModel[] blocks = JsonConvert
                .DeserializeObject<BlockModel[]>(blockchainJson);
             var result = blocks.Where(b => b.Hash == hash);
-         
+
             if (result.Count() == 0)
                 return null;
             else
@@ -160,10 +177,10 @@ namespace CoreBC.DataAccess
             return result;
         }
 
-        public List<string> GetBlockHashList() 
+        public List<string> GetBlockHashList()
         {
             List<string> result = null;
-            var allBlocks= GetAllBlocks();
+            var allBlocks = GetAllBlocks();
             if (allBlocks != null)
             {
                 result = allBlocks.Select(b => b.Hash).ToList();
@@ -174,17 +191,28 @@ namespace CoreBC.DataAccess
         public bool SaveRecievedBlock(BlockModel block)
         {
             bool result = true;
-            try
+            int counter = 0;
+            int maxTries = 5;
+            while (counter < maxTries)
             {
-                removeAllMinedTXs(block);
-                Helpers.WeHaveReceivedNewBlock = true;
-                string blockJson = getNewBlockChain(block, BlockchainPath);
-                File.WriteAllText(BlockchainPath, blockJson);
-                UpdateAccountBalances();
-            }
-            catch (Exception ex)
-            {
-                Helpers.ReadException(ex);
+                try
+                {
+                    counter++;
+                    removeAllMinedTXs(block);
+                    Helpers.WeHaveReceivedNewBlock = true;
+                    string blockJson = getNewBlockChain(block, BlockchainPath);
+                    File.WriteAllText(BlockchainPath, blockJson);
+                    UpdateAccountBalances();
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    if (counter == maxTries)
+                    {
+                        Helpers.ReadException(ex);
+                        break;
+                    }
+                }
             }
             return result;
         }
@@ -286,21 +314,21 @@ namespace CoreBC.DataAccess
             decimal coinbaseReward = Convert.ToDecimal(coinbase.Output.Amount);
             decimal feeReward = Convert.ToDecimal(coinbase.FeeReward);
             decimal totalReward = coinbaseReward + feeReward;
-            
+
             if (result.ContainsKey(address))
                 result[address] += totalReward;
             else
                 result.Add(address, totalReward);
-            
+
             return result;
         }
 
         private Dictionary<string, decimal> addTranactions(
-                Dictionary<string, decimal> result, 
+                Dictionary<string, decimal> result,
                 TransactionModel[] transactions
             )
         {
-            
+
             foreach (var tx in transactions)
             {
                 string inputAddress = tx.Input.FromAddress;
@@ -369,10 +397,10 @@ namespace CoreBC.DataAccess
         private void removeAllMinedTXs(BlockModel block)
         {
             string mempoolJson = File.ReadAllText(MempoolPath);
-            
+
             if (block.Transactions == null)
                 return;
-            
+
             List<TransactionModel> mempoolList;
 
             if (String.IsNullOrEmpty(mempoolJson) ||

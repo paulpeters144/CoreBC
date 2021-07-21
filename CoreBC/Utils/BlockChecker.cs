@@ -91,8 +91,13 @@ namespace CoreBC.Utils
         {
             if (block.Height == 0)
                 return true;
+            
+            BlockModel[] priorBlocks = DB.GetAllBlocks();
+            
+            if (priorBlocks == null)
+                return true;
 
-            BlockModel[] priorBlocks = DB.GetAllBlocks()
+            var bsToExamine = priorBlocks
                 .Where(b => b.Height < block.Height)
                 .ToArray();
             string whatDifficultyShouldBe = Helpers.GetDifficulty(priorBlocks);

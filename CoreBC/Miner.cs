@@ -75,6 +75,7 @@ namespace CoreBC
                 nextBlock = Mine(nextBlock, 50000000);
                 if (nextBlock != null)
                     save(nextBlock);
+
             }
         }
 
@@ -145,7 +146,6 @@ namespace CoreBC
                 {
                     block.Hash = hashAttemp;
                     block.Nonce = nonce;
-                    IsMining = false;
                     return block;
                 }
                 else

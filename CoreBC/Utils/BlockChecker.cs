@@ -21,7 +21,7 @@ namespace CoreBC.Utils
         public BlockChecker()
         {
             ChainKeys = new Wallet(Program.UserName);
-            DB = new DBAccess();
+            DB = Program.DB;
         }
 
         public void ConfirmPriorBlocks()
@@ -81,8 +81,8 @@ namespace CoreBC.Utils
             if (block.TXs.Length != block.TransactionCount)
                 return false;
 
-            if (!difficultyIsCorrectFor(block))
-                return false;
+            //if (!difficultyIsCorrectFor(block))
+            //    return false;
 
             return true;
         }
@@ -100,7 +100,7 @@ namespace CoreBC.Utils
             var bsToExamine = priorBlocks
                 .Where(b => b.Height < block.Height)
                 .ToArray();
-            string whatDifficultyShouldBe = Helpers.GetDifficulty(priorBlocks);
+            string whatDifficultyShouldBe = Helpers.GetDifficulty(); //Helpers.GetDifficulty(priorBlocks);
             return whatDifficultyShouldBe == block.Difficulty;
         }
 

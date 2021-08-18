@@ -14,6 +14,7 @@ namespace CoreBC.DataAccess
         public string BlockchainPath { get; set; }
         public string MempoolPath { get; set; }
         public string AccountSetPath { get; set; }
+        private bool CanAccess = true;
 
         public DBAccess()
         {
@@ -29,12 +30,18 @@ namespace CoreBC.DataAccess
         }
         public void Save(BlockModel[] fullBlockChain)
         {
+            waitForTurn();
+
             string json = JsonConvert.SerializeObject(fullBlockChain);
             File.WriteAllText(BlockchainPath, json);
+
+            CanAccess = true;
         }
 
         public BlockModel[] GetAllBlocks()
         {
+            waitForTurn();
+
             int tries = 5;
             int counter = 0;
             while (counter < tries)
@@ -58,15 +65,19 @@ namespace CoreBC.DataAccess
                 }
             }
 
+            CanAccess = true;
 
             return null;
         }
 
         public List<TransactionModel> GetMempool()
         {
+            waitForTurn();
+
             string mempoolPath = Helpers.GetMempooFile();
             string mempoolFile = File.ReadAllText(mempoolPath);
 
+            CanAccess = true;
             if (String.IsNullOrEmpty(mempoolFile) ||
                 mempoolFile == "[]")
             {
@@ -80,6 +91,8 @@ namespace CoreBC.DataAccess
 
         public BlockModel GetBlockByHash(string hash)
         {
+            waitForTurn();
+
             string blockchainJson = File.ReadAllText(BlockchainPath);
 
             if (String.IsNullOrEmpty(blockchainJson))
@@ -88,7 +101,7 @@ namespace CoreBC.DataAccess
             BlockModel[] blocks = JsonConvert
                .DeserializeObject<BlockModel[]>(blockchainJson);
             var result = blocks.Where(b => b.Hash == hash);
-
+            CanAccess = true;
             if (result.Count() == 0)
                 return null;
             else
@@ -97,6 +110,8 @@ namespace CoreBC.DataAccess
 
         public decimal GetWalletBalanceFor(string publicKey)
         {
+            waitForTurn();
+
             decimal result = 0;
             string acctSet = File.ReadAllText(AccountSetPath);
             AccountModel[] accounts = JsonConvert.DeserializeObject<AccountModel[]>(acctSet);
@@ -129,11 +144,15 @@ namespace CoreBC.DataAccess
                 }
             }
 
+            CanAccess = true;
+
             return result;
         }
 
         public BlockModel GetBlockHeight(int height)
         {
+            waitForTurn();
+
             BlockModel result = null;
             string blockchainJson = File.ReadAllText(BlockchainPath);
             BlockModel[] blocks = JsonConvert
@@ -146,11 +165,14 @@ namespace CoreBC.DataAccess
                     break;
                 }
             }
+            CanAccess = true;
             return result;
         }
 
         public BlockModel[] GetLastBlocks(int count)
         {
+            waitForTurn();
+
             BlockModel[] result = null;
             string blockchainJson = File.ReadAllText(BlockchainPath);
             BlockModel[] blocks = JsonConvert
@@ -161,12 +183,15 @@ namespace CoreBC.DataAccess
             for (int i = 0; i < count; i++)
                 tempList.Add(orderedBlocks[i]);
 
+            CanAccess = true;
             result = tempList.ToArray();
             return result;
         }
 
         public bool SaveMinedBlock(BlockModel block)
         {
+            waitForTurn();
+
             bool result = true;
             block = getMinedTransactions(block);
             removeAllMinedTXs(block);
@@ -174,22 +199,24 @@ namespace CoreBC.DataAccess
             Helpers.WeHaveReceivedNewBlock = true;
             File.WriteAllText(BlockchainPath, blockJson);
             UpdateAccountBalances();
+            CanAccess = true;
             return result;
         }
 
         public List<string> GetBlockHashList()
         {
-            List<string> result = null;
             var allBlocks = GetAllBlocks();
+            List<string> result = null;
             if (allBlocks != null)
-            {
                 result = allBlocks.Select(b => b.Hash).ToList();
-            }
+            CanAccess = true;
             return result;
         }
 
         public bool SaveRecievedBlock(BlockModel block)
         {
+            waitForTurn();
+
             bool result = true;
             int counter = 0;
             int maxTries = 5;
@@ -214,11 +241,14 @@ namespace CoreBC.DataAccess
                     }
                 }
             }
+            CanAccess = true;
             return result;
         }
 
         public bool SaveToMempool(TransactionModel tx)
         {
+            waitForTurn();
+
             try
             {
                 string oldMempoolFile = File.ReadAllText(MempoolPath);
@@ -247,16 +277,19 @@ namespace CoreBC.DataAccess
                 }
                 string mempool = JsonConvert.SerializeObject(txs, Formatting.Indented);
                 File.WriteAllText(MempoolPath, mempool);
+                CanAccess = true;
             }
             catch (Exception)
             {
+                CanAccess = true;
                 return false;
             }
 
             return true;
         }
 
-        public bool UpdateAccountBalances()
+        // private methods below
+        private bool UpdateAccountBalances()
         {
             try
             {
@@ -271,7 +304,6 @@ namespace CoreBC.DataAccess
                 return false;
             }
         }
-
         private Dictionary<string, string> sumBlockActivity(BlockModel[] blocks)
         {
             List<BlockModel> blockList = (from b in blocks
@@ -443,6 +475,16 @@ namespace CoreBC.DataAccess
 
             block.Transactions = mempoolList.ToArray();
             return block;
+        }
+        private void waitForTurn()
+        {
+            int counter = 0;
+            while (!CanAccess && counter < 20)
+            {
+                Thread.Sleep(50);
+                counter++;
+            }
+            CanAccess = false;
         }
     }
 }

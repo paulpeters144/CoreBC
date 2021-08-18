@@ -17,7 +17,7 @@ namespace CoreBC.P2PLib
         private string ID;
         public MessageHandler(string id)
         {
-            DB = new DBAccess();
+            DB = Program.DB;
             ID = id;
         }
         public void Handle(MessageParser message, TcpClient socket)

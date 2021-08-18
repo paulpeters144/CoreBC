@@ -19,7 +19,7 @@ namespace CoreBC
         {
             KeyName = keyName;
             findKey();
-            DB = new DBAccess();
+            DB = Program.DB;
         }
         public TransactionModel SignTransaction(TransactionModel tx)
         {

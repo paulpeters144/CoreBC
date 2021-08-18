@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using CoreBC.DataAccess;
 using CoreBC.Utils;
 using Microsoft.Extensions.Configuration;
 
@@ -10,10 +11,11 @@ namespace CoreBC
         public static IConfiguration Configuration { get; set; }
         public static string FilePath { get; set; }
         public static string UserName;
-
+        public static DBAccess DB;
         static void Main(string[] args)
         {
             startup();
+            DB = new DBAccess();
             CommandListener cmdListener = new CommandListener();
             cmdListener.ProcessCommand("help");
             cmdListener.ProcessCommand("sign-in theuser");

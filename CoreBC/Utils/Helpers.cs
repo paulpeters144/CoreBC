@@ -10,7 +10,7 @@ namespace CoreBC.Utils
     public static class Helpers
     {
         public static bool WeHaveReceivedNewBlock = false;
-        public static string MiningDifficulty = "00000";
+        public static string MiningDifficulty = "000000";
         public static string FormatDigits(decimal amount)
         {
             decimal rounded = Math.Round(amount, 14, MidpointRounding.ToEven);
@@ -40,50 +40,50 @@ namespace CoreBC.Utils
         public static string GetDifficulty() =>
            MiningDifficulty;
 
-        public static string GetDifficulty(BlockModel[] blocks)
-        {
-            int maxBlockTimeSeconds = 600;
-            int adjustEvery = 7;
-            List<BlockModel> blockList = blocks.OrderByDescending(b => b.Time).ToList();
-            string lastDifficulty = blockList[0].Difficulty;
+        //public static string GetDifficulty(BlockModel[] blocks)
+        //{
+        //    int maxBlockTimeSeconds = 600;
+        //    int adjustEvery = 7;
+        //    List<BlockModel> blockList = blocks.OrderByDescending(b => b.Time).ToList();
+        //    string lastDifficulty = blockList[0].Difficulty;
 
-            if (blockList[0].Height % adjustEvery != 0 || blockList[0].Height == 0)
-                return lastDifficulty;
+        //    if (blockList[0].Height % adjustEvery != 0 || blockList[0].Height == 0)
+        //        return lastDifficulty;
 
-            long endRange = blockList[0].Height;
-            long startRange = blockList[adjustEvery].Height;
+        //    long endRange = blockList[0].Height;
+        //    long startRange = blockList[adjustEvery].Height;
 
-            List<BlockModel> listRange = blockList
-                .Where(b => b.Height >= startRange && b.Height <= endRange)
-                .Reverse()
-                .ToList();
+        //    List<BlockModel> listRange = blockList
+        //        .Where(b => b.Height >= startRange && b.Height <= endRange)
+        //        .Reverse()
+        //        .ToList();
 
-            List<long> blockTimeList = new List<long>();
-            long lastTime = -1;
-            foreach (var block in listRange)
-            {
-                if (lastTime == -1)
-                {
-                    lastTime = block.Time;
-                }
-                else
-                {
-                    long miningTime = block.Time - lastTime;
-                    blockTimeList.Add(miningTime);
-                    lastTime = block.Time;
-                }
-            }
+        //    List<long> blockTimeList = new List<long>();
+        //    long lastTime = -1;
+        //    foreach (var block in listRange)
+        //    {
+        //        if (lastTime == -1)
+        //        {
+        //            lastTime = block.Time;
+        //        }
+        //        else
+        //        {
+        //            long miningTime = block.Time - lastTime;
+        //            blockTimeList.Add(miningTime);
+        //            lastTime = block.Time;
+        //        }
+        //    }
 
-            var averageTime = Math.Floor(Convert.ToDecimal(blockTimeList.Sum() / blockTimeList.Count));
-            string result = lastDifficulty;
+        //    var averageTime = Math.Floor(Convert.ToDecimal(blockTimeList.Sum() / blockTimeList.Count));
+        //    string result = lastDifficulty;
 
-            if (averageTime > maxBlockTimeSeconds)
-                result = lastDifficulty.Substring(0, lastDifficulty.Length - 1);
-            else if (averageTime < maxBlockTimeSeconds)
-                result = result + "0";
+        //    if (averageTime > maxBlockTimeSeconds)
+        //        result = lastDifficulty.Substring(0, lastDifficulty.Length - 1);
+        //    else if (averageTime < maxBlockTimeSeconds)
+        //        result = result + "0";
 
-            return result;
-        }
+        //    return result;
+        //}
 
         public static decimal GetFeePercent() =>
            0.00025M;

@@ -17,7 +17,7 @@ namespace CoreBC
         private P2PNetwork P2PNetwork;
         public Miner(P2PNetwork p2pNetwork)
         {
-            DB = new DBAccess();
+            DB = Program.DB;
             P2PNetwork = p2pNetwork;
         }
 
@@ -67,7 +67,7 @@ namespace CoreBC
                     Height = height,
                     MerkleRoot = merkleRoot,
                     TXs = allTransactions,
-                    Difficulty = Helpers.GetDifficulty(allBlocks),
+                    Difficulty = Helpers.GetDifficulty(), //Helpers.GetDifficulty(allBlocks),
                     Coinbase = coinbase
                 };
                 nextBlock.Coinbase.FeeReward = Helpers.FormatDigits(feeReward);
@@ -146,6 +146,7 @@ namespace CoreBC
                 {
                     block.Hash = hashAttemp;
                     block.Nonce = nonce;
+                    IsMining = false;
                     return block;
                 }
                 else

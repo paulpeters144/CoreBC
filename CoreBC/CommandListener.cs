@@ -20,7 +20,7 @@ namespace CoreBC
         {
             int bufferSize = 2058;
             P2PNetwork = new P2PNetwork(bufferSize);
-            DB = new DBAccess();
+            DB = Program.DB;
         }
         public void ProcessCommand(string mainCmd)
         {
@@ -42,7 +42,6 @@ namespace CoreBC
                 case "send-to": sendCurrencyTo(subCmd); break;
                 case "genesis": getGBlock(); break;
                 case "balance": getBalance(); break;
-                case "update-bal": DB.UpdateAccountBalances(); break;
                 case "address": getAddress(); break;
                 case "set-diff": setDifficulty(subCmd); break;
                 default: Console.WriteLine("Not a valid command"); break;
